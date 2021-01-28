@@ -25,11 +25,16 @@ See https://packagist.org/packages/mistralys/html_quickform2
   * Select element: prependOption() method to insert an element at the top
   * Select optgroups: getLabel() method
   * Select element and optgroups: countOptions() method with recursive capability
+  * Fully reworked the testsuites so they all run correctly
 
 ## Performance tweaks
 
   * Container getElementById() method 
   * Auto-generated element IDs
+
+## Requirements
+
+  * Compatible with PHP >= 7.3 
 
 ## Element ID generation
 
