@@ -19,10 +19,8 @@
  * @link      https://pear.php.net/package/HTML_QuickForm2
  */
 
+use HTML\QuickForm2\AbstractHTMLElement\GlobalOptions;
 use PHPUnit\Framework\TestCase;
-
-/** Sets up includes */
-require_once dirname(dirname(__DIR__)) . '/TestHelper.php';
 
 /**
  * Unit test for HTML_QuickForm2_Element_Select class
@@ -31,7 +29,7 @@ class HTML_QuickForm2_Element_ScriptTest extends TestCase
 {
     protected function setUp() : void
     {
-        HTML_Common2::setOption('nonce', null);
+        GlobalOptions::setNonce(null);
     }
 
     public function testInlineScriptNonce()
@@ -42,10 +40,10 @@ class HTML_QuickForm2_Element_ScriptTest extends TestCase
         $script = $element->__toString();
         $this->assertNotRegExp('/<script[^>]*nonce/', $script);
 
-        HTML_Common2::setOption(
-            'nonce',
-            $nonce = base64_encode('HTML_QuickForm2_nonce' . microtime())
-        );
+        $nonce = base64_encode('HTML_QuickForm2_nonce' . microtime());
+
+        GlobalOptions::setNonce($nonce);
+
         $script = $element->__toString();
         $this->assertRegExp('/<script[^>]*nonce="' . $nonce . '"/', $script);
     }

@@ -21,72 +21,12 @@
 
 use PHPUnit\Framework\TestCase;
 
-/** Sets up includes */
-require_once dirname(__DIR__) . '/TestHelper.php';
-
-/**
- * A non-abstract subclass of Element
- *
- * Element class is still abstract, we should "implement" the remaining methods.
- * We need working setValue() / getValue() to test getValue() of Container
- */
-class HTML_QuickForm2_ElementImpl2 extends HTML_QuickForm2_Element
-{
-    protected $value;
-
-    public function getType() { return 'concrete'; }
-    public function __toString() { return ''; }
-
-    public function getRawValue()
-    {
-        return $this->value;
-    }
-
-    public function setValue($value)
-    {
-        $this->value = $value;
-    }
-}
-
-/**
- * A non-abstract subclass of Container
- *
- * Container class is still abstract, we should "implement" the remaining methods
- * and also make validate() public to be able to test it.
- */
-class HTML_QuickForm2_ContainerImpl extends HTML_QuickForm2_Container
-{
-    public function getType() { return 'concrete'; }
-    public function setValue($value) { return ''; }
-    public function __toString() { return ''; }
-
-    public function validate() { return parent::validate(); }
-}
-
-/**
- * A Rule to check that Container Rules are called after those of contained elements
- *
- * @see https://pear.php.net/bugs/17576
- */
-class RuleRequest17576 extends HTML_QuickForm2_Rule
-{
-    protected function validateOwner()
-    {
-        foreach ($this->owner as $child) {
-            if ($child->getError()) {
-                return false;
-            }
-        }
-        return true;
-    }
-}
-
 /**
  * Unit test for HTML_QuickForm2_Container class
  */
 class HTML_QuickForm2_ContainerTest extends TestCase
 {
-    public function testCanSetName()
+    public function testCanSetName() : void
     {
         $obj = new HTML_QuickForm2_ContainerImpl();
         $this->assertNotNull($obj->getName(), 'Containers should always have \'name\' attribute');
@@ -94,14 +34,12 @@ class HTML_QuickForm2_ContainerTest extends TestCase
         $obj = new HTML_QuickForm2_ContainerImpl('foo');
         $this->assertEquals('foo', $obj->getName());
 
-        $this->assertSame($obj, $obj->setName('bar'));
+        $obj->setName('bar');
         $this->assertEquals('bar', $obj->getName());
 
         $obj->setAttribute('name', 'baz');
         $this->assertEquals('baz', $obj->getName());
-
     }
-
 
     public function testCanSetId()
     {
@@ -418,18 +356,24 @@ class HTML_QuickForm2_ContainerTest extends TestCase
         $this->assertFalse($elPers->persistentFreeze(), 'Contained element should not have persistent freeze behaviour');
     }
 
-    public function testGetValue()
+    public function testGetValue() : void
     {
         $c1 = new HTML_QuickForm2_ContainerImpl('hasValues');
-        $this->assertNull($c1->getValue());
+        $this->assertEmpty($c1->getValue());
 
-        $c2 = $c1->appendChild(new HTML_QuickForm2_ContainerImpl('sub'));
-        $this->assertNull($c1->getValue());
+        $c2 = new HTML_QuickForm2_ContainerImpl('sub');
+        $c1->appendChild($c2);
+        $this->assertEmpty($c1->getValue());
 
-        $el1 = $c1->appendChild(new HTML_QuickForm2_ElementImpl2('foo[idx]'));
-        $el2 = $c1->appendChild(new HTML_QuickForm2_ElementImpl2('bar'));
-        $el3 = $c2->appendChild(new HTML_QuickForm2_ElementImpl2('baz'));
-        $this->assertNull($c1->getValue());
+        $el1 = new HTML_QuickForm2_ElementImpl2('foo[idx]');
+        $el2 = new HTML_QuickForm2_ElementImpl2('bar');
+        $el3 = new HTML_QuickForm2_ElementImpl2('baz');
+
+        $c1->appendChild($el1);
+        $c1->appendChild($el2);
+        $c2->appendChild($el3);
+
+        $this->assertEmpty($c1->getValue());
 
         $el1->setValue('a value');
         $el2->setValue('other value');

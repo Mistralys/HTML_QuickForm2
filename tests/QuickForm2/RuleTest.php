@@ -21,9 +21,6 @@
 
 use PHPUnit\Framework\TestCase;
 
-/** Sets up includes */
-require_once dirname(__DIR__) . '/TestHelper.php';
-
 /**
  * The non-abstract subclass of Rule
  */

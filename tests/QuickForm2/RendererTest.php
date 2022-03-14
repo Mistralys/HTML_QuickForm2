@@ -21,9 +21,6 @@
 
 use PHPUnit\Framework\TestCase;
 
-/** Sets up includes */
-require_once dirname(__DIR__) . '/TestHelper.php';
-
 /**
  * An "implementation" of renderer, to be able to create an instance
  */
@@ -86,9 +83,9 @@ class HTML_QuickForm2_RendererTest extends TestCase
     public function testRegisterRenderer()
     {
         $type = 'fake' . mt_rand();
-        HTML_Quickform2_Renderer::register($type, 'HTML_QuickForm2_FakeRenderer');
+        HTML_QuickForm2_Renderer::register($type, 'HTML_QuickForm2_FakeRenderer');
 
-        $renderer = HTML_Quickform2_Renderer::factory($type);
+        $renderer = HTML_QuickForm2_Renderer::factory($type);
         $this->assertInstanceOf('HTML_QuickForm2_Renderer', $renderer);
     }
 
@@ -98,7 +95,7 @@ class HTML_QuickForm2_RendererTest extends TestCase
         HTML_QuickForm2_Renderer::register($type, 'HTML_QuickForm2_FakeRenderer');
         HTML_QuickForm2_Renderer::registerPlugin($type, 'HTML_QuickForm2_FakeRenderer_HelloPlugin');
 
-        $renderer = HTML_Quickform2_Renderer::factory($type);
+        $renderer = HTML_QuickForm2_Renderer::factory($type);
         $this->assertTrue($renderer->methodExists('renderElement'));
         $this->assertTrue($renderer->methodExists('sayHello'));
         $this->assertFalse($renderer->methodExists('sayGoodbye'));
@@ -132,7 +129,7 @@ class HTML_QuickForm2_RendererTest extends TestCase
         HTML_QuickForm2_Renderer::registerPlugin($type, 'HTML_QuickForm2_FakeRenderer_AnotherHelloPlugin');
 
         try {
-            $renderer = HTML_Quickform2_Renderer::factory($type);
+            $renderer = HTML_QuickForm2_Renderer::factory($type);
             $renderer->sayHello();
         } catch (HTML_QuickForm2_InvalidArgumentException $e) {
             $this->assertRegexp('/^Duplicate method name/', $e->getMessage());

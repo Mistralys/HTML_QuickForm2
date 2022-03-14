@@ -21,24 +21,30 @@
 
 use PHPUnit\Framework\TestCase;
 
-/** Sets up includes */
-require_once dirname(dirname(__DIR__)) . '/TestHelper.php';
-
 /**
  * Unit test for HTML_QuickForm2_Element_Fieldset class
  */
 class HTML_QuickForm2_Element_FieldsetTest extends TestCase
 {
-    public function testFieldsetIsEmptyByDefault()
+    public function testFieldsetIsEmptyByDefault() : void
     {
         $fs = new HTML_QuickForm2_Container_Fieldset();
-        $this->assertRegExp('!\s*<fieldset id="[^"]+">\s*</fieldset>\s*!', $fs->__toString());
+
+        $this->assertNull($fs->getLabel());
+        $this->assertRegExp('!\s*<fieldset id="[^"]+" name="[^"]+">\s*</fieldset>\s*!', $fs->__toString());
     }
 
-    public function testLegend()
+    public function testLegend() : void
     {
-        $fs = new HTML_QuickForm2_Container_Fieldset(null, null, array('label' => 'legend'));
+        $fs = new HTML_QuickForm2_Container_Fieldset(
+            null,
+            null,
+            array(
+                'label' => 'legend'
+            )
+        );
+
+        $this->assertSame('legend', $fs->getLabel());
         $this->assertRegExp('!\s*<fieldset[^>]+>\s*<legend id="[^"]+-legend">legend</legend>\s*</fieldset>\s*!', $fs->__toString());
     }
 }
-?>

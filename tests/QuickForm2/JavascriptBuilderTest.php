@@ -19,10 +19,8 @@
  * @link      https://pear.php.net/package/HTML_QuickForm2
  */
 
+use HTML\QuickForm2\AbstractHTMLElement\GlobalOptions;
 use PHPUnit\Framework\TestCase;
-
-/** Sets up includes */
-require_once dirname(__DIR__) . '/TestHelper.php';
 
 /**
  * Unit test for HTML_QuickForm2_JavascriptBuilder class
@@ -31,7 +29,7 @@ class HTML_QuickForm2_JavascriptBuilderTest extends TestCase
 {
     protected function setUp() : void
     {
-        HTML_Common2::setOption('nonce', null);
+        GlobalOptions::setNonce('');
     }
 
     public function testEncode()
@@ -89,10 +87,9 @@ class HTML_QuickForm2_JavascriptBuilderTest extends TestCase
         $libraries = $builder->getLibraries(true, true);
         $this->assertNotRegExp('/<script[^>]*nonce/', $libraries);
 
-        HTML_Common2::setOption(
-            'nonce',
-            $nonce = base64_encode('HTML_QuickForm2_nonce' . microtime())
-        );
+        $nonce = base64_encode('HTML_QuickForm2_nonce' . microtime());
+        GlobalOptions::setNonce($nonce);
+
         $libraries = $builder->getLibraries(true, true);
         $this->assertRegExp('/<script[^>]*nonce="' . $nonce . '"/', $libraries);
     }
@@ -164,12 +161,11 @@ class HTML_QuickForm2_JavascriptBuilderTest extends TestCase
         $this->assertStringContainsString('Some setup code', $script);
         $this->assertNotRegExp('/<script[^>]*nonce/', $script);
 
-        HTML_Common2::setOption(
-            'nonce',
-            $nonce = base64_encode('HTML_QuickForm2_nonce' . microtime())
-        );
+        $nonce = base64_encode('HTML_QuickForm2_nonce' . microtime());
+
+        GlobalOptions::setNonce($nonce);
         $script = $builder->getFormJavascript();
+
         $this->assertRegExp('/<script[^>]*nonce="' . $nonce . '"/', $script);
     }
 }
-?>

@@ -19,17 +19,15 @@
  * @link      https://pear.php.net/package/HTML_QuickForm2
  */
 
+use HTML\QuickForm2\AbstractHTMLElement;
 use PHPUnit\Framework\TestCase;
-
-/** Sets up includes */
-require_once dirname(dirname(__DIR__)) . '/TestHelper.php';
 
 /**
  * Let's just make parseAttributes() public rather than copy and paste regex
  */
-abstract class HTML_QuickForm2_Element_SelectTest_AttributeParser extends HTML_Common2
+abstract class HTML_QuickForm2_Element_SelectTest_AttributeParser extends AbstractHTMLElement
 {
-    public static function parseAttributes($attrString)
+    public static function parseAttributes(string $attrString) : array
     {
         return parent::parseAttributes($attrString);
     }
@@ -267,7 +265,7 @@ class HTML_QuickForm2_Element_SelectTest extends TestCase
     {
         $options = array('1' => 'Option 1', '2' => 'Option 2');
 
-        $formPost = new HTML_QuickForm2('multiple', 'post', null, false);
+        $formPost = new HTML_QuickForm2('multiple', 'post');
         $single1  = $formPost->appendChild(new HTML_QuickForm2_Element_Select('single1', null, array('options' => $options)));
         $single2  = $formPost->appendChild(new HTML_QuickForm2_Element_Select('single2', null, array('options' => $options)));
         $multiple = $formPost->appendChild(new HTML_QuickForm2_Element_Select('mult', array('multiple'), array('options' => $options)));

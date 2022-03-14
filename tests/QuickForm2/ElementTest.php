@@ -19,65 +19,23 @@
  * @link      https://pear.php.net/package/HTML_QuickForm2
  */
 
+use HTML\QuickForm2\AbstractHTMLElement\GlobalOptions;
 use PHPUnit\Framework\TestCase;
-
-/** Sets up includes */
-require_once dirname(__DIR__) . '/TestHelper.php';
-
-/**
- * A non-abstract subclass of Element
- *
- * Element class is still abstract, we should "implement" the remaining methods.
- * Note the default implementation of setValue() / getValue(), needed to test
- * setting the value from Data Source
- */
-class HTML_QuickForm2_ElementImpl extends HTML_QuickForm2_Element
-{
-    protected $value;
-
-    public function getType() { return 'concrete'; }
-    public function __toString() { return ''; }
-
-    public function getRawValue()
-    {
-        return $this->value;
-    }
-
-    public function setValue($value)
-    {
-        $this->value = $value;
-    }
-}
 
 /**
  * Unit test for HTML_QuickForm2_Element class,
  */
 class HTML_QuickForm2_ElementTest extends TestCase
 {
-    protected function setUp() : void
-    {
-        $_REQUEST = array(
-            '_qf__form1' => ''
-        );
+    // region: _Tests
 
-        $_POST = array(
-            'foo' => 'a value',
-            'fooReborn' => 'another value'
-        );
-    }
-
-    protected function tearDown() : void
-    {
-        HTML_Common2::setOption('id_force_append_index', true);
-    }
-
-    public function testCanSetName()
+    public function testCanSetName() : void
     {
         $obj = new HTML_QuickForm2_ElementImpl();
         $this->assertNotNull($obj->getName(), 'Elements should always have \'name\' attribute');
 
-        $obj = new HTML_QuickForm2_ElementImpl('foo');
-        $this->assertEquals('foo', $obj->getName());
+        $obj = new HTML_QuickForm2_ElementImpl(self::DEFAULT_NAME);
+        $this->assertEquals(self::DEFAULT_NAME, $obj->getName());
 
         $this->assertSame($obj, $obj->setName('bar'));
         $this->assertEquals('bar', $obj->getName());
@@ -118,11 +76,19 @@ class HTML_QuickForm2_ElementTest extends TestCase
     }
 
 
-    public function testUniqueIdsGenerated()
+    public function testUniqueIdsGenerated() : void
     {
         $names = array(
-            '', 'value', 'array[]', 'array[8]', 'array[60000]', 'array[20]',
-            'array[name][]', 'bigger[name][5]', 'bigger[name][]', 'bigger[name][6]'
+            '',
+            'value',
+            'array[]',
+            'array[8]',
+            'array[60000]',
+            'array[20]',
+            'array[name][]',
+            'bigger[name][5]',
+            'bigger[name][]',
+            'bigger[name][6]'
         );
         
         $usedIds = array();
@@ -141,92 +107,112 @@ class HTML_QuickForm2_ElementTest extends TestCase
         }
     }
 
-
-    public function testManualIdsNotReused()
+    public function testManualIdsNotReused() : void
     {
         // use a unique element name for this test, to avoid conflicts
         // with other tests.
         $elName = 'grabby';
         
         $usedIds = array(
-            $elName.'-0', $elName.'-2', $elName.'-bar-0', $elName.'-bar-2', $elName.'-baz-0-0'
+            $elName.'-0',
+            $elName.'-2',
+            $elName.'-bar-0',
+            $elName.'-bar-2',
+            $elName.'-baz-0-0'
         );
+
         $names = array(
-            $elName, $elName.'[bar]', $elName.'[baz][]'
+            $elName,
+            $elName.'[bar]',
+            $elName.'[baz][]'
         );
-        foreach ($usedIds as $id) {
-            $elManual = new HTML_QuickForm2_ElementImpl($elName, array('id' => $id));
+
+        foreach ($usedIds as $id)
+        {
+            new HTML_QuickForm2_ElementImpl($elName, array('id' => $id));
         }
-        foreach ($names as $name) {
+
+        foreach ($names as $name)
+        {
             $el = new HTML_QuickForm2_ElementImpl($name);
             $this->assertNotContains($el->getId(), $usedIds);
+
             $usedIds[] = $el->getId();
+
             // Duplicate name...
             $el2 = new HTML_QuickForm2_ElementImpl($name);
             $this->assertNotContains($el2->getId(), $usedIds);
+
             $usedIds[] = $el2->getId();
         }
     }
 
-    public function testSetValueFromSubmitDatasource()
+    public function testSetValueFromSubmitDatasource() : void
     {
         $form = new HTML_QuickForm2('form1');
-        $elFoo = $form->appendChild(new HTML_QuickForm2_ElementImpl('foo'));
-        $elBar = $form->appendChild(new HTML_QuickForm2_ElementImpl('bar'));
+        $elA = $form->appendChild(new HTML_QuickForm2_ElementImpl(self::DEFAULT_NAME));
+        $elB = $form->appendChild(new HTML_QuickForm2_ElementImpl('bar'));
 
-        $this->assertEquals('a value', $elFoo->getValue());
-        $this->assertNull($elBar->getValue());
+        $this->assertEquals(self::DEFAULT_VALUE, $elA->getValue());
+        $this->assertNull($elB->getValue());
     }
 
-    public function testDataSourcePriority()
+    /**
+     * Even if a datasource is added, the submitted data
+     * must take precedence.
+     */
+    public function testDataSourcePriority() : void
     {
         $form = new HTML_QuickForm2('form1');
+
+        $otherName = $this->getUniqueName();
+
         $form->addDataSource(new HTML_QuickForm2_DataSource_Array(array(
-            'foo' => 'new value',
-            'bar' => 'default value'
+            self::DEFAULT_NAME => 'overwritten value',
+            $otherName => 'default value'
         )));
-        $elFoo = $form->appendChild(new HTML_QuickForm2_ElementImpl('foo'));
-        $elBar = $form->appendChild(new HTML_QuickForm2_ElementImpl('bar'));
 
-        $this->assertEquals('a value', $elFoo->getValue());
-        $this->assertEquals('default value', $elBar->getValue());
+        $elA = $form->appendChild(new HTML_QuickForm2_ElementImpl(self::DEFAULT_NAME));
+        $elB = $form->appendChild(new HTML_QuickForm2_ElementImpl($otherName));
+
+        $this->assertEquals(self::DEFAULT_VALUE, $elA->getValue(), 'The element has a submitted value, this must take precedence.');
+        $this->assertEquals('default value', $elB->getValue(), 'The element has no submitted value, so it must use the data source value.');
     }
 
-    public function testUpdateValueFromNewDataSource()
+    public function testUpdateValueFromNewDataSource() : void
     {
-        $form = new HTML_QuickForm2('form2');
-        $el = $form->appendChild(new HTML_QuickForm2_ElementImpl('foo'));
+        $form = new HTML_QuickForm2('unsubmitted');
+        $name = $this->getUniqueName();
+
+        $el = $form->appendChild(new HTML_QuickForm2_ElementImpl($name));
         $this->assertNull($el->getValue());
 
-        $form->addDataSource(new HTML_QuickForm2_DataSource_Array(array(
-            'foo' => 'updated value'
-        )));
+        $ds = new HTML_QuickForm2_DataSource_Array(array(
+            $name => 'updated value'
+        ));
+
+        $form->addDataSource($ds);
+
+        $this->assertFalse($form->isSubmitted());
+        $this->assertCount(1, $el->getDataSources());
+        $this->assertCount(1, $form->getDataSources());
+
         $this->assertEquals('updated value', $el->getValue());
     }
 
-    public function testUpdateValueOnNameChange()
+    public function testUpdateValueOnNameChange() : void
     {
         $form = new HTML_QuickForm2('form1');
-        $elFoo = $form->appendChild(new HTML_QuickForm2_ElementImpl('foo'));
-        $elFoo->setName('fooReborn');
-        $this->assertEquals('another value', $elFoo->getValue());
+        $elFoo = $form->appendChild(new HTML_QuickForm2_ElementImpl(self::DEFAULT_NAME));
+
+        $elFoo->setName(self::ALTERNATE_NAME);
+
+        $this->assertEquals(self::ALTERNATE_VALUE, $elFoo->getValue());
     }
 
-    public function testGenerateIdsWithoutIndexes()
+    public function testUniqueIdsGeneratedWithoutIndexes() : void
     {
-        HTML_Common2::setOption('id_force_append_index', false);
-
-        $name = 'finno_' . mt_rand(0, 1000);
-        $el = new HTML_QuickForm2_ElementImpl($name);
-        $this->assertEquals($name, $el->getId());
-
-        $el2 = new HTML_QuickForm2_ElementImpl($name . '[bar]');
-        $this->assertEquals($name . '-bar', $el2->getId());
-    }
-
-    public function testUniqueIdsGeneratedWithoutIndexes()
-    {
-        HTML_Common2::setOption('id_force_append_index', false);
+        GlobalOptions::setIDAppendEnabled(false);
 
         $this->testUniqueIdsGenerated();
     }
@@ -235,9 +221,10 @@ class HTML_QuickForm2_ElementTest extends TestCase
      * Prevent generating ids like "0-0" for (grouped) elements named "0"
      * @see http://news.php.net/php.pear.general/31496
      */
-    public function testGeneratedIdsShouldNotStartWithNumbers()
+    public function testGeneratedIdsShouldNotStartWithNumbers() : void
     {
         $el = new HTML_QuickForm2_ElementImpl('0');
+
         $this->assertNotRegExp('/^\d/', $el->getId());
     }
 
@@ -245,16 +232,94 @@ class HTML_QuickForm2_ElementTest extends TestCase
      * If data source contains explicitly provided null values, those should be used
      * @link http://pear.php.net/bugs/bug.php?id=20295
      */
-    public function testBug20295()
+    public function testBug20295() : void
     {
         $form = new HTML_QuickForm2('bug20295');
-        $el = $form->appendChild(new HTML_QuickForm2_ElementImpl('foo'));
+        $name = $this->getUniqueName();
+
+        $el = $form->appendChild(new HTML_QuickForm2_ElementImpl($name));
         $el->setValue('not empty');
 
-        $form->addDataSource(new HTML_QuickForm2_DataSource_Array(array(
-            'foo' => null
-        )));
+        $ds = new HTML_QuickForm2_DataSource_Array(array(
+            $name => null
+        ));
+
+        $this->assertInstanceOf(HTML_QuickForm2_DataSource_NullAware::class, $ds);
+
+        $form->addDataSource($ds);
+
         $this->assertNull($el->getValue());
     }
+
+    public function test_getArrayKey() : void
+    {
+        $this->assertSame(
+            (new HTML_QuickForm2_Element_InputText('el1'))->getArrayPath(),
+            'el1'
+        );
+
+        // name and value can be on different levels:
+        // Element = el1
+        // Value = el1 > sub1
+        //
+        // Have a method that returns the path to the value,
+        // which is then traversed until it's found, for each
+        // element separately.
+        //
+        // Path must be relative to the container.
+        //
+        // g1[el1][sub1][sub2]
+        // g1 > el1 > sub1 > sub2
+        //
+
+        $this->assertSame(
+            (new HTML_QuickForm2_Element_InputText('el1[sub1]'))->getArrayPath(),
+            'el1' // ????
+        );
+
+        $g1 = new HTML_QuickForm2_Container_Group('g1');
+        $g1e1 = $g1->addText('g1e1');
+
+        $this->assertSame('g1', $g1->getArrayPath());
+        $this->assertSame('g1e1', $g1e1->getArrayPath());
+    }
+
+    // endregion
+
+    // region: Support methods
+
+    public const DEFAULT_VALUE = 'default value';
+    public const ALTERNATE_VALUE = 'alternate value';
+    public const DEFAULT_NAME = 'default_element';
+    public const ALTERNATE_NAME = 'alternate_element';
+
+    private static int $nameCounter = 0;
+
+    private function getUniqueName() : string
+    {
+        self::$nameCounter++;
+
+        return 'unique'.self::$nameCounter;
+    }
+
+    protected function setUp() : void
+    {
+        GlobalOptions::setIDAppendEnabled(true);
+
+        $_REQUEST = array(
+            '_qf__form1' => ''
+        );
+
+        $_POST = array(
+            self::DEFAULT_NAME => self::DEFAULT_VALUE,
+            self::ALTERNATE_NAME => self::ALTERNATE_VALUE
+        );
+    }
+
+    protected function tearDown() : void
+    {
+        GlobalOptions::setIDAppendEnabled(true);
+    }
+
+    // endregion
 }
-?>

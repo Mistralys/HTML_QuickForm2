@@ -21,26 +21,32 @@
 
 use PHPUnit\Framework\TestCase;
 
-/** Sets up includes */
-require_once dirname(dirname(__DIR__)) . '/TestHelper.php';
-
 /**
  * Unit test for HTML_QuickForm2_Element_Button class
  */
 class HTML_QuickForm2_Element_ButtonTest extends TestCase
 {
+    public const TEST_FORM_ID = 'buttons';
+
     protected function setUp() : void
     {
         $_POST = array(
             'foo' => 'A button clicked',
             'bar' => 'Another button clicked'
         );
+
+        $_REQUEST[HTML_QuickForm2::generateTrackingVarName(self::TEST_FORM_ID)] = 'yes';
     }
 
     public function testConstructorSetsContent()
     {
-        $button = new HTML_QuickForm2_Element_Button('foo', null, array('content' => 'Some string'));
-        $this->assertRegexp('!<button[^>]*>Some string</button>!', $button->__toString());
+        $button = new HTML_QuickForm2_Element_Button('foo');
+        $button->setContent('Some string');
+
+        $this->assertMatchesRegularExpression(
+            '!<button[^>]*>Some string</button>!',
+            $button->__toString()
+        );
     }
 
     public function testCannotBeFrozen()
@@ -52,7 +58,8 @@ class HTML_QuickForm2_Element_ButtonTest extends TestCase
 
     public function testSetValueFromSubmitDataSource()
     {
-        $form = new HTML_QuickForm2('buttons', 'post', null, false);
+        $form = new HTML_QuickForm2(self::TEST_FORM_ID, 'post');
+
         $foo = $form->appendChild(new HTML_QuickForm2_Element_Button('foo', array('type' => 'submit')));
         $bar = $form->appendChild(new HTML_QuickForm2_Element_Button('bar', array('type' => 'button')));
         $baz = $form->appendChild(new HTML_QuickForm2_Element_Button('baz', array('type' => 'submit')));
@@ -62,6 +69,7 @@ class HTML_QuickForm2_Element_ButtonTest extends TestCase
             'bar' => 'Default for bar',
             'baz' => 'Default for baz'
         )));
+
         $this->assertEquals('A button clicked', $foo->getValue());
         $this->assertNull($bar->getValue());
         $this->assertNull($baz->getValue());
@@ -69,5 +77,34 @@ class HTML_QuickForm2_Element_ButtonTest extends TestCase
         $foo->setAttribute('disabled');
         $this->assertNull($foo->getValue());
     }
+
+    public function testIsSubmitConstructorParams() : void
+    {
+        $el = new HTML_QuickForm2_Element_Button('foo', array('type' => 'submit'));
+        $this->assertSame('1', $el->getAttribute('value'));
+        $this->assertNull($el->getValue());
+        $this->assertTrue($el->isSubmit());
+    }
+
+    public function testIsSubmitMethod() : void
+    {
+        $el = new HTML_QuickForm2_Element_Button('foo');
+        $el->makeSubmit('custom');
+        $this->assertSame('custom', $el->getAttribute('value'));
+        $this->assertNull($el->getValue());
+        $this->assertTrue($el->isSubmit());
+    }
+
+    public function testValueNullIfDisabled() : void
+    {
+        $form = new HTML_QuickForm2(self::TEST_FORM_ID, 'post');
+
+        $foo = $form->addButton('foo');
+        $foo->makeSubmit();
+
+        $this->assertEquals('A button clicked', $foo->getValue());
+
+        $foo->setAttribute('disabled');
+        $this->assertNull($foo->getValue());
+    }
 }
-?>

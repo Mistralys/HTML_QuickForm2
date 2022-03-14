@@ -21,17 +21,19 @@
 
 use PHPUnit\Framework\TestCase;
 
-/** Sets up includes */
-require_once dirname(dirname(__DIR__)) . '/TestHelper.php';
-
 /**
  * Unit test for HTML_QuickForm2_Element_Group class
  */
 class HTML_QuickForm2_Element_GroupTest extends TestCase
 {
-    public function testNoRenameOnEmptyGroupName()
+    /**
+     * @see HTML_QuickForm2_Container_Group::resolveChildName()
+     */
+    public function testNoRenameOnEmptyGroupName() : void
     {
         $g1 = new HTML_QuickForm2_Container_Group();
+
+        $this->assertEmpty($g1->getName(), sprintf('Name: %s', $g1->getName()));
 
         $e = $g1->addText('e0');
         $this->assertEquals('e0', $e->getName());
@@ -40,12 +42,15 @@ class HTML_QuickForm2_Element_GroupTest extends TestCase
         $this->assertEquals('e1[e2]', $e->getName());
     }
 
-    public function testGroupRename()
+    public function testGroupRename() : void
     {
         $g1 = new HTML_QuickForm2_Container_Group('g1[g4]');
 
+        $this->assertSame('g1[g4]', $g1->getName());
+
         $e1 = $g1->addText('e1');
         $e2 = $g1->addText('e2[x]');
+
         $this->assertEquals('g1[g4][e1]', $e1->getName());
         $this->assertEquals('g1[g4][e2][x]', $e2->getName());
 
@@ -58,11 +63,14 @@ class HTML_QuickForm2_Element_GroupTest extends TestCase
         $this->assertEquals('e2[x]', $e2->getName());
     }
 
-    public function testElementRename()
+    public function testElementRename() : void
     {
         $g1 = new HTML_QuickForm2_Container_Group('g1');
 
-        $e = $g1->addText('e0');
+        $e = HTML_QuickForm2_Factory::createElement('text', 'e0');
+        $this->assertEquals('g1[e0]', $g1->resolveChildName($e->getName(), $e->getContainer()));
+        //$e = $g1->addText('e0');
+        $g1->addElement($e);
         $this->assertEquals('g1[e0]', $e->getName());
 
         $e = $g1->addText('e1[e2]');
@@ -77,7 +85,7 @@ class HTML_QuickForm2_Element_GroupTest extends TestCase
         $e = $g1->addText('');
         $this->assertEquals('g1[]', $e->getName());
 
-        $e = $g1->addText();
+        $e = $g1->addText(null);
         $this->assertEquals('g1[]', $e->getName());
 
         $e = $g1->addText('[]');
@@ -197,63 +205,6 @@ class HTML_QuickForm2_Element_GroupTest extends TestCase
         $this->assertEquals('g2[e1]', $e1->getName());
     }
 
-    public function testSetValue()
-    {
-        $foo      = new HTML_QuickForm2_Container_Group('foo');
-        $fooBar   = $foo->addText('bar');
-        $fooBaz   = $foo->addText('ba[z]');
-        $fooQuux  = $foo->addGroup('qu')->addText('ux');
-        $fooNop   = $foo->addGroup();
-        $fooXyzzy = $fooNop->addText('xyzzy');
-        $fooYzzyx = $fooNop->addText('yzzyx');
-
-        $foo->setValue(array(
-            'bar'   => 'first value',
-            'ba'    => array('z' => 'second value'),
-            'qu'    => array('ux' => 'third value'),
-                       array('xyzzy' => 'fourth value'),
-                       array('yzzyx' => 'fifth value')
-        ));
-        $this->assertEquals('first value', $fooBar->getValue());
-        $this->assertEquals('second value', $fooBaz->getValue());
-        $this->assertEquals('third value', $fooQuux->getValue());
-        $this->assertEquals('fourth value', $fooXyzzy->getValue());
-        $this->assertEquals('fifth value', $fooYzzyx->getValue());
-
-        $anon = new HTML_QuickForm2_Container_Group();
-        $e1   = $anon->addText('e1');
-        $e2   = $anon->addText('e2[i1]');
-        $e3   = $anon->addGroup('g1')->addText('e3');
-        $g2   = $anon->addGroup();
-        $e4   = $g2->addText('e4');
-        $e5   = $g2->addText('e5');
-        $anon->setValue(array(
-            'e1' => 'first value',
-            'e2' => array('i1' => 'second value'),
-            'g1' => array('e3' => 'third value'),
-                    array('e4' => 'fourth value'),
-                    array('e5' => 'fifth value')
-        ));
-        $this->assertEquals('first value', $e1->getValue());
-        $this->assertEquals('second value', $e2->getValue());
-        $this->assertEquals('third value', $e3->getValue());
-        $this->assertEquals('fourth value', $e4->getValue());
-        $this->assertEquals('fifth value', $e5->getValue());
-    }
-
-   /**
-    * Should be possible to use setValue() fluently
-    *
-    * @link https://pear.php.net/bugs/bug.php?id=19307
-    */
-    public function testBug19307()
-    {
-        $foo = new HTML_QuickForm2_Container_Group('foo');
-        $foo->addText('bar');
-
-        $this->assertSame($foo, $foo->setValue(array('bar' => 'a value')));
-    }
-
     public function testGetValue()
     {
         $value1    = array('foo' => 'foo value');
@@ -263,6 +214,7 @@ class HTML_QuickForm2_Element_GroupTest extends TestCase
 
         $form = new HTML_QuickForm2('testGroupGetValue');
         $form->addDataSource(new HTML_QuickForm2_DataSource_Array($formValue));
+
         $g1 = $form->addElement('group', 'g1');
         $g1->addElement('text', 'foo');
         $g2 = $form->addElement('group', 'g2[i2]');
@@ -369,21 +321,6 @@ class HTML_QuickForm2_Element_GroupTest extends TestCase
         $this->assertEquals('baz', $el2->getName());
     }
 
-   /**
-    * Similar to bug #16806, properly set value for group of checkboxes having names like foo[]
-    * @link http://pear.php.net/bugs/bug.php?id=16806
-    */
-    public function testCheckboxGroupSetValue()
-    {
-        $group = new HTML_QuickForm2_Container_Group('boxGroup');
-        $group->addCheckbox('', array('value' => 'red'));
-        $group->addCheckbox('', array('value' => 'green'));
-        $group->addCheckbox('', array('value' => 'blue'));
-
-        $group->setValue(array('red', 'blue'));
-        $this->assertEquals(array('red', 'blue'), $group->getValue());
-    }
-
     /**
      * Renaming groups with names like 'foo[foo]' or '1[1]' resulted in wrong names for grouped elements
      * @link http://pear.php.net/bugs/bug.php?id=19477
@@ -396,52 +333,4 @@ class HTML_QuickForm2_Element_GroupTest extends TestCase
 
         $this->assertEquals('test[foo][foo][bar]', $text->getName());
     }
-
-    /**
-     * Special case for a setValue() on a group of radiobuttons
-     * @link http://pear.php.net/bugs/bug.php?id=20103
-     */
-    public function testRadioGroupSetValue()
-    {
-        $group = new HTML_QuickForm2_Container_Group();
-        $group->addRadio('request20103', array('value' => 'first'));
-        $group->addRadio('request20103', array('value' => 'second'));
-        $group->addRadio('request20103', array('value' => 'third'));
-
-        $group->setValue(array('request20103' => 'second'));
-        $this->assertEquals(array('request20103' => 'second'), $group->getValue());
-
-        $namedGroup = new HTML_QuickForm2_Container_Group('named');
-        $namedGroup->addRadio('request20103[sub]', array('value' => 'first'));
-        $namedGroup->addRadio('request20103[sub]', array('value' => 'second'));
-        $namedGroup->addRadio('request20103[sub]', array('value' => 'third'));
-
-        $namedGroup->setValue(array('request20103' => array('sub' => 'third')));
-        $this->assertEquals(array('request20103' => array('sub' => 'third')), $namedGroup->getValue());
-    }
-
-    public function testScalarValueBug()
-    {
-        $group = new HTML_QuickForm2_Container_Group();
-        $text  = $group->addText('foo[bar]');
-        $group->setValue(array('foo' => 'foo value'));
-
-        $this->assertEquals('', $text->getValue());
-    }
-
-    public function testSetValueUpdatesAllElements()
-    {
-        $group = new HTML_QuickForm2_Container_Group();
-        $foo   = $group->addText('foo')->setValue('foo value');
-        $bar   = $group->addText('bar')->setValue('bar value');
-
-        $group->setValue(array('foo' => 'new foo value'));
-        $this->assertEquals('new foo value', $foo->getValue());
-        $this->assertEquals('', $bar->getValue());
-
-        $group->setValue(null);
-        $this->assertEquals('', $foo->getValue());
-        $this->assertEquals('', $bar->getValue());
-    }
 }
-?>

@@ -19,29 +19,12 @@
  * @link      https://pear.php.net/package/HTML_QuickForm2
  */
 
-use PHPUnit\Framework\TestCase;
-
-/** Sets up includes */
-require_once __DIR__ . '/TestHelper.php';
-
-class FormRule extends HTML_QuickForm2_Rule
-{
-    protected function validateOwner()
-    {
-        return false;
-    }
-
-    protected function setOwnerError()
-    {
-        $this->owner->getElementById('foo')->setError('an error message');
-    }
-}
-
+use assets\QuickFormTestCase;
 
 /**
  * Unit test for HTML_QuickForm2 class
  */
-class HTML_QuickForm2Test extends TestCase
+class HTML_QuickForm2Test extends QuickFormTestCase
 {
     protected function setUp() : void
     {
@@ -58,79 +41,58 @@ class HTML_QuickForm2Test extends TestCase
         $_FILES = array();
     }
 
-    public function testTrackSubmit()
+    public function testTrackSubmit() : void
     {
         $tests = array(
             array(
-                'label' => 'Tracking enabled, and POST empty.',
+                'label' => 'Tracking var present, and POST empty.',
                 'method' => 'post',
                 'id' => 'track',
-                'tracking' => true,
                 'count' => 1,
                 'trackVarFound' => true,
                 'getNotEmpty' => false,
                 'postNotEmpty' => false
             ),
             array(
-                'label' => 'Tracking disabled, and POST empty.',
-                'method' => 'post',
-                'id' => 'track',
-                'tracking' => false,
-                'count' => 0,
-                'trackVarFound' => true,
-                'getNotEmpty' => false,
-                'postNotEmpty' => false
-            ),
-            array(
-                'label' => 'Tracking enabled, GET not empty.',
+                'label' => 'Tracking var present, GET not empty.',
                 'method' => 'get',
                 'id' => 'track',
-                'tracking' => true,
                 'count' => 1,
                 'trackVarFound' => true,
                 'getNotEmpty' => true,
                 'postNotEmpty' => false
-            ),
-            array(
-                'label' => 'Tracking disabled, but GET not empty.',
-                'method' => 'get',
-                'id' => 'track',
-                'tracking' => false,
-                'count' => 1,
-                'trackVarFound' => true,
-                'getNotEmpty' => true,
-                'postNotEmpty' => false
-            ),
+            )
         );
         
         $number = 1;
         foreach($tests as $def)
         {
-            $form = new HTML_QuickForm2($def['id'], $def['method'], null, $def['tracking']);
+            $form = new HTML_QuickForm2($def['id'], $def['method'], null);
 
             $data = $form->getDataReason();
-            
+
             $descr = 'Test #'.$number.' - '.strtoupper($def['method']).': '.$def['label'];
             
-            $this->assertEquals(
-                $def['count'], 
-                count($form->getDataSources()), 
-                'Datsource count does not match. '.$descr
+            $this->assertCount(
+                $def['count'],
+                $form->getDataSources(),
+                'Datasource count does not match. ' . $descr
             );
             
-            $this->assertEquals($def['trackVarFound'], $data['trackVarFound'], 'Tracking var should have been found. '.$descr);
-            $this->assertEquals($def['postNotEmpty'], $data['postNotEmpty'], 'Post should be empty. '.$descr);
-            $this->assertEquals($def['getNotEmpty'], $data['getNotEmpty'], 'Get should not be empty. '.$descr);
+            $this->assertSame($def['trackVarFound'], $data['trackVarFound'], 'Tracking var should have been found. '.$descr);
+            $this->assertSame($def['postNotEmpty'], $data['postNotEmpty'], 'Post should be empty. '.$descr);
+            $this->assertSame($def['getNotEmpty'], $data['getNotEmpty'], 'Get should not be empty. '.$descr);
             
             $number++;
         }
     }
     
-    public function testConstructorSetsIdAndMethod()
+    public function testConstructorSetsIdAndMethod() : void
     {
         $form1 = new HTML_QuickForm2(null);
         $this->assertEquals('post', $form1->getAttribute('method'));
-        $this->assertNotEquals(0, strlen($form1->getAttribute('id')));
+        $this->assertNotNull($form1->getAttribute('id'));
+        $this->assertNotSame(0, strlen($form1->getAttribute('id')));
 
         $form2 = new HTML_QuickForm2('foo', 'get');
         $this->assertEquals('get', $form2->getAttribute('method'));
@@ -150,19 +112,23 @@ class HTML_QuickForm2Test extends TestCase
         $this->assertEquals('/foobar.php', $form2->getAttribute('action'));
     }
 
-    public function testIdIsReadonly()
+    public function testIdIsReadonly() : void
     {
         $form = new HTML_QuickForm2('foo', 'get');
+
+        $this->assertTrue($form->isAttributeReadonly('id'));
 
         $this->expectException(HTML_QuickForm2_InvalidArgumentException::class);
         
         $form->removeAttribute('id');
     }
     
-    public function testMethodIsReadonly()
+    public function testMethodIsReadonly() : void
     {
         $form = new HTML_QuickForm2('foo', 'get');
-        
+
+        $this->assertTrue($form->isAttributeReadonly('method'));
+
         $this->expectException(HTML_QuickForm2_InvalidArgumentException::class);
         
         $form->setAttribute('method', 'post');
@@ -218,6 +184,10 @@ class HTML_QuickForm2Test extends TestCase
     {
         $form = new HTML_QuickForm2('track', 'post');
         $foo = $form->addElement('text', 'foo', array('id' => 'foo'));
+
+        $this->assertSame('foo', $foo->getName());
+        $this->assertSame('foo', $foo->getId());
+
         $form->addRule(new FormRule($form));
 
         $this->assertFalse($form->validate());
@@ -228,13 +198,13 @@ class HTML_QuickForm2Test extends TestCase
      * Do not return values for automatically added elements from getValue()
      * @link http://pear.php.net/bugs/bug.php?id=19403
      */
-    public function testRequest19403()
+    public function testRequest19403() : void
     {
-        $_POST = array('_qf__track' => '');
-        $form  = new HTML_QuickForm2('track');
+        $form = $this->createSubmittedForm();
+        $trackName = $form->getTrackingVarName();
 
-        $this->assertArrayHasKey('_qf__track', $form->getRawValue());
-        $this->assertArrayNotHasKey('_qf__track', $form->getValue());
+        $this->assertCount(1, $form->getElementsByName($trackName));
+        $this->assertArrayNotHasKey($trackName, $form->getRawValue());
+        $this->assertArrayNotHasKey($trackName, $form->getValue());
     }
 }
-?>

@@ -21,9 +21,6 @@
 
 use PHPUnit\Framework\TestCase;
 
-/** Sets up includes */
-require_once dirname(dirname(__DIR__)) . '/TestHelper.php';
-
 /**
  * Unit test for HTML_QuickForm2_Renderer_Callback class
  */
@@ -96,7 +93,7 @@ class HTML_QuickForm2_Renderer_CallbackTest extends TestCase
         );
 
         $class = get_class($this);
-        $renderer = HTML_Quickform2_Renderer::factory('callback')
+        $renderer = HTML_QuickForm2_Renderer::factory('callback')
             ->setCallbackForClass(
                 'HTML_QuickForm2_Element_InputText', array($class, '_renderInputText')
             )->setCallbackForClass(
@@ -129,7 +126,7 @@ class HTML_QuickForm2_Renderer_CallbackTest extends TestCase
             'text', 'foo', array('id' => 'testRenderRequiredElement')
         );
 
-        $renderer = HTML_Quickform2_Renderer::factory('callback')
+        $renderer = HTML_QuickForm2_Renderer::factory('callback')
             ->setCallbackForId(
                 'testRenderRequiredElement',
                 array(get_class($this), '_renderTestRenderRequiredElement')
@@ -151,7 +148,7 @@ class HTML_QuickForm2_Renderer_CallbackTest extends TestCase
         $element = HTML_QuickForm2_Factory::createElement(
             'text', 'foo', array('id' => 'testElementWithError')
         );
-        $renderer = HTML_Quickform2_Renderer::factory('callback')
+        $renderer = HTML_QuickForm2_Renderer::factory('callback')
             ->setCallbackForId(
                 'testElementWithError',
                 array(get_class($this), '_renderTestElementWithError')
@@ -183,7 +180,7 @@ class HTML_QuickForm2_Renderer_CallbackTest extends TestCase
         $element = HTML_QuickForm2_Factory::createElement(
             'text', 'foo', array('id' => 'testSingleLabel')
         );
-        $renderer = HTML_Quickform2_Renderer::factory('callback')
+        $renderer = HTML_QuickForm2_Renderer::factory('callback')
             ->setCallbackForId(
                 'testSingleLabel',
                 array(get_class($this), '_renderTestSingleLabel')
@@ -205,7 +202,7 @@ class HTML_QuickForm2_Renderer_CallbackTest extends TestCase
         $element = HTML_QuickForm2_Factory::createElement(
             'text', 'foo', array('id' => 'testMultipleLabels')
         )->setLabel(array('first', 'second'));
-        $renderer = HTML_Quickform2_Renderer::factory('callback')
+        $renderer = HTML_QuickForm2_Renderer::factory('callback')
             ->setCallbackForId(
                 'testMultipleLabels',
                 array(get_class($this), '_renderTestMultipleLabels')
@@ -228,7 +225,7 @@ class HTML_QuickForm2_Renderer_CallbackTest extends TestCase
         $form = new HTML_QuickForm2('reqnote');
         $element = $form->addText('testReqnote');
 
-        $renderer = HTML_Quickform2_Renderer::factory('callback')
+        $renderer = HTML_QuickForm2_Renderer::factory('callback')
             ->setOption('required_note', 'This is requi-i-i-ired!');
 
         $this->assertStringNotContainsString('<div class="reqnote">', $form->render($renderer)->__toString());
@@ -241,7 +238,7 @@ class HTML_QuickForm2_Renderer_CallbackTest extends TestCase
     {
         $form     = new HTML_QuickForm2('groupedErrors');
         $element  = $form->addText('testGroupedErrors')->setError('Some error');
-        $renderer = HTML_Quickform2_Renderer::factory('callback')
+        $renderer = HTML_QuickForm2_Renderer::factory('callback')
             ->setOption(array(
                 'group_errors'  => true,
                 'errors_prefix' => 'Your errors:',
@@ -259,7 +256,7 @@ class HTML_QuickForm2_Renderer_CallbackTest extends TestCase
         $form     = new HTML_QuickForm2('groupedHiddens');
         $hidden1  = $form->addHidden('hidden1');
         $hidden2  = $form->addHidden('hidden2');
-        $renderer = HTML_Quickform2_Renderer::factory('callback')
+        $renderer = HTML_QuickForm2_Renderer::factory('callback')
             ->setOption('group_hiddens', false);
 
         $html = $form->render($renderer)->__toString();
@@ -301,7 +298,7 @@ class HTML_QuickForm2_Renderer_CallbackTest extends TestCase
         $element = $group->addElement('text', 'bar', array('id' => 'testRenderGroupedElement'));
 
         $class= get_class($this);
-        $renderer = HTML_Quickform2_Renderer::factory('callback')
+        $renderer = HTML_QuickForm2_Renderer::factory('callback')
             ->setCallbackForClass(
                 'HTML_QuickForm2_Element_InputText',
                 array($class, '_renderGroupInputText')
@@ -368,7 +365,7 @@ class HTML_QuickForm2_Renderer_CallbackTest extends TestCase
         $element2 = $group->addElement('text', 'baz');
         $element3 = $group->addElement('text', 'quux');
 
-        $renderer = HTML_Quickform2_Renderer::factory('callback')
+        $renderer = HTML_QuickForm2_Renderer::factory('callback')
             ->setCallbackForId('testSeparators', array(get_class($this), '_renderTestSeparators'))
             ->setElementCallbackForGroupId(
                 'testSeparators', 'HTML_QuickForm2_Element_InputText', array(get_class($this), '_renderTestSeparators2')

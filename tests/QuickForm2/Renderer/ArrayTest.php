@@ -21,9 +21,6 @@
 
 use PHPUnit\Framework\TestCase;
 
-/** Sets up includes */
-require_once dirname(dirname(__DIR__)) . '/TestHelper.php';
-
 /**
  * Unit test for HTML_QuickForm2_Renderer_Array class
  */
@@ -139,7 +136,7 @@ class HTML_QuickForm2_Renderer_ArrayTest extends TestCase
         $form = new HTML_QuickForm2('arrayReqnote');
         $element = $form->addText('testArrayReqnote');
 
-        $renderer = HTML_Quickform2_Renderer::factory('array')
+        $renderer = HTML_QuickForm2_Renderer::factory('array')
             ->setOption('required_note', 'This is requi-i-i-ired!');
 
         $this->assertArrayNotHasKey('required_note', $form->render($renderer)->toArray());
@@ -154,7 +151,7 @@ class HTML_QuickForm2_Renderer_ArrayTest extends TestCase
         $form = new HTML_QuickForm2('arrayStyle');
         $form->addText('foo', array('id' => 'testArrayWithStyle'));
         $form->addText('bar', array('id' => 'testArrayWithoutStyle'));
-        $renderer = HTML_Quickform2_Renderer::factory('array')
+        $renderer = HTML_QuickForm2_Renderer::factory('array')
             ->setStyleForId('testArrayWithStyle', 'weird');
 
         $array = $form->render($renderer)->toArray();

@@ -21,9 +21,6 @@
 
 use PHPUnit\Framework\TestCase;
 
-/** Sets up includes */
-require_once dirname(dirname(__DIR__)) . '/TestHelper.php';
-
 /**
  * Unit test for HTML_QuickForm2_Element_Hierselect class
  */
@@ -59,10 +56,16 @@ class HTML_QuickForm2_Element_HierselectTest extends TestCase
 
         $hs = $form->addHierselect('hs')->loadOptions(array($this->_primary, $this->_secondary))
                 ->setValue(array(1, 12));
-        $form->addDataSource(new HTML_QuickForm2_DataSource_Array(array(
-            'hs' => null
-        )));
 
+        echo 'SET DATA SOURCE'.PHP_EOL;
+
+        $newDataSource = new HTML_QuickForm2_DataSource_Array(array(
+            'hs' => null
+        ));
+
+        $form->addDataSource($newDataSource);
+
+        $this->assertSame($newDataSource, $form->getDataSources());
         $this->assertNull($hs->getValue());
     }
 }

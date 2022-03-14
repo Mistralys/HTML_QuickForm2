@@ -21,17 +21,6 @@
 
 use PHPUnit\Framework\TestCase;
 
-/** Sets up includes */
-require_once dirname(__DIR__) . '/TestHelper.php';
-
-class HTML_QuickForm2_ContainerFilterImpl extends HTML_QuickForm2_Container
-{
-    public function getType() { return 'concrete'; }
-    public function setValue($value) { return ''; }
-    public function __toString() { return ''; }
-    public function validate() { return parent::validate(); }
-}
-
 /**
  * A filter that modifies the value on every iteration
  * To make sure it is not called more times than it should.
