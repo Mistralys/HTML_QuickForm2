@@ -74,7 +74,7 @@ class HTML_QuickForm2_Element_Date extends HTML_QuickForm2_Container_Group
 
    /**
     * Message provider for option texts
-    * @var  callback|HTML_QuickForm2_MessageProvider
+    * @var  callable|HTML_QuickForm2_MessageProvider
     */
     protected $messageProvider;
 
@@ -259,8 +259,9 @@ class HTML_QuickForm2_Element_Date extends HTML_QuickForm2_Container_Group
                     }
                     $separator = '';
                     // Should we add an empty option to the top of the select?
-                    if (!is_array($this->data['addEmptyOption']) && $this->data['addEmptyOption']
-                        || is_array($this->data['addEmptyOption']) && !empty($this->data['addEmptyOption'][$sign])
+                    if ((!is_array($this->data['addEmptyOption']) && $this->data['addEmptyOption'])
+                        ||
+                        (is_array($this->data['addEmptyOption']) && !empty($this->data['addEmptyOption'][$sign]))
                     ) {
                         // Using '+' array operator to preserve the keys
                         if (is_array($this->data['emptyOptionText']) && !empty($this->data['emptyOptionText'][$sign])) {
@@ -293,8 +294,8 @@ class HTML_QuickForm2_Element_Date extends HTML_QuickForm2_Container_Group
     /**
      * Callback for creating hour list without leading zeroes, formerly via create_function()
      *
-     * @param $v
-     * @param $k
+     * @param string $v
+     * @param string $k
      */
     private function _shortHourCallback(&$v, $k)
     {
@@ -344,7 +345,7 @@ class HTML_QuickForm2_Element_Date extends HTML_QuickForm2_Container_Group
     *
     * @return HTML_QuickForm2_Element_Date
     */
-    public function setValue($value)
+    public function setValue($value) : self
     {
         if (empty($value)) {
             $value = array();
@@ -354,7 +355,7 @@ class HTML_QuickForm2_Element_Date extends HTML_QuickForm2_Container_Group
 
         } elseif (is_scalar($value)
             || $value instanceof DateTime
-            || interface_exists('DateTimeInterface') && $value instanceof DateTimeInterface
+            || (interface_exists('DateTimeInterface') && $value instanceof DateTimeInterface)
         ) {
             if (!is_scalar($value)) {
                 $arr = explode('-', $value->format('w-j-n-Y-g-G-i-s-a-A-W'));
@@ -384,6 +385,7 @@ class HTML_QuickForm2_Element_Date extends HTML_QuickForm2_Container_Group
                 'W' => $this->trimLeadingZeros($arr[10])
             );
         }
+
         return parent::setValue($value);
     }
 
@@ -392,20 +394,25 @@ class HTML_QuickForm2_Element_Date extends HTML_QuickForm2_Container_Group
     *
     * Since the date element also accepts a timestamp as value, the default
     * group behavior is changed.
+    *
+    * @return $this
     */
-    protected function updateValue()
+    protected function updateValue() : self
     {
         $name = $this->getName();
-        /* @var $ds HTML_QuickForm2_DataSource_NullAware */
-        foreach ($this->getDataSources() as $ds) {
+
+        foreach ($this->getDataSources() as $ds)
+        {
             if (null !== ($value = $ds->getValue($name))
-                || $ds instanceof HTML_QuickForm2_DataSource_NullAware && $ds->hasValue($name)
-            ) {
+                ||
+                ($ds instanceof HTML_QuickForm2_DataSource_NullAware && $ds->hasValue($name))
+            )
+            {
                 $this->setValue($value);
-                return;
+                return $this;
             }
         }
-        parent::updateValue();
+
+        return parent::updateValue();
     }
 }
-?>

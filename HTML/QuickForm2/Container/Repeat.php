@@ -54,10 +54,9 @@
  * @author   Alexey Borzov <avb@php.net>
  * @author   Bertrand Mansion <golgote@mamasam.com>
  * @license  https://opensource.org/licenses/BSD-3-Clause BSD 3-Clause License
- * @version  Release: @package_version@
  * @link     https://pear.php.net/package/HTML_QuickForm2
  */
-class HTML_QuickForm2_Container_Repeat extends HTML_QuickForm2_Container
+class HTML_QuickForm2_Container_Repeat extends HTML_QuickForm2_Container_Group
 {
     /**
      * Key to replace by actual item index in elements' names / ids / values
@@ -114,7 +113,7 @@ class HTML_QuickForm2_Container_Repeat extends HTML_QuickForm2_Container
      *
      * @throws HTML_QuickForm2_Exception
      */
-    public function setValue($value)
+    public function setValue($value) : self
     {
         throw new HTML_QuickForm2_Exception('Not implemented');
     }
@@ -161,14 +160,16 @@ class HTML_QuickForm2_Container_Repeat extends HTML_QuickForm2_Container
      * @return HTML_QuickForm2_Container prototype
      * @throws HTML_QuickForm2_NotFoundException if prototype was not set
      */
-    protected function getPrototype()
+    protected function getPrototype() : HTML_QuickForm2_Container
     {
-        if (empty($this->elements[0])) {
-            throw new HTML_QuickForm2_NotFoundException(
-                "Repeat element needs a prototype, use setPrototype()"
-            );
+        if (isset($this->elements[0]) && $this->elements[0] instanceof HTML_QuickForm2_Container)
+        {
+            return $this->elements[0];
         }
-        return $this->elements[0];
+
+        throw new HTML_QuickForm2_NotFoundException(
+            "Repeat element needs a prototype, use setPrototype()"
+        );
     }
 
     /**
@@ -181,7 +182,7 @@ class HTML_QuickForm2_Container_Repeat extends HTML_QuickForm2_Container
      * @return   HTML_QuickForm2_Node     Added element
      * @throws   HTML_QuickForm2_InvalidArgumentException
      */
-    public function appendChild(HTML_QuickForm2_Node $element)
+    public function appendChild(HTML_QuickForm2_Node $element) : HTML_QuickForm2_Node
     {
         return $this->getPrototype()->appendChild($element);
     }
@@ -196,7 +197,7 @@ class HTML_QuickForm2_Container_Repeat extends HTML_QuickForm2_Container
      * @return   HTML_QuickForm2_Node     Removed object
      * @throws   HTML_QuickForm2_NotFoundException
      */
-    public function removeChild(HTML_QuickForm2_Node $element)
+    public function removeChild(HTML_QuickForm2_Node $element) : HTML_QuickForm2_Node
     {
         return $this->getPrototype()->removeChild($element);
     }
@@ -222,16 +223,17 @@ class HTML_QuickForm2_Container_Repeat extends HTML_QuickForm2_Container
     /**
      * Returns the data sources for this element
      *
-     * @return array
+     * @return HTML_QuickForm2_DataSource[]
      * @see $passDataSources
      */
-    protected function getDataSources()
+    public function getDataSources() : array
     {
-        if (!$this->passDataSources) {
+        if (!$this->passDataSources)
+        {
             return array();
-        } else {
-            return parent::getDataSources();
         }
+
+        return parent::getDataSources();
     }
 
     /**
@@ -334,7 +336,7 @@ class HTML_QuickForm2_Container_Repeat extends HTML_QuickForm2_Container
      * @see setIndexField()
      * @throws HTML_QuickForm2_Exception
      */
-    protected function updateValue()
+    protected function updateValue() : self
     {
         // check that we are not added to another Repeat
         // done here instead of in setContainer() for reasons outlined in InputFile
@@ -349,15 +351,18 @@ class HTML_QuickForm2_Container_Repeat extends HTML_QuickForm2_Container
         }
 
         if (null === $this->indexField && !$this->_guessIndexField()) {
-            return;
+            return $this;
         }
+
         /* @var HTML_QuickForm2_DataSource $ds */
         foreach (parent::getDataSources() as $ds) {
             if (null !== ($value = $ds->getValue($this->indexField))) {
                 $this->setIndexes(array_keys($value));
-                return;
+                return $this;
             }
         }
+
+        return $this;
     }
 
     /**
@@ -470,24 +475,24 @@ class HTML_QuickForm2_Container_Repeat extends HTML_QuickForm2_Container
      *
      * @see backupChildAttributes()
      */
-    protected function replaceIndexTemplates($index, array $backup)
+    protected function replaceIndexTemplates(int $index, array $backup) : void
     {
         $this->passDataSources = true;
         $key = 0;
         /* @var HTML_QuickForm2_Node $child */
         foreach ($this->getRecursiveIterator() as $child) {
             if (false !== strpos($backup[$key]['name'], self::INDEX_KEY)) {
-                $child->setName(str_replace(self::INDEX_KEY, $index, $backup[$key]['name']));
+                $child->setName(str_replace(self::INDEX_KEY, (string)$index, $backup[$key]['name']));
             }
             if ($child instanceof HTML_QuickForm2_Element_InputCheckable
                 && false !== strpos($backup[$key]['valueAttr'], self::INDEX_KEY)
             ) {
                 $child->setAttribute(
-                    'value', str_replace(self::INDEX_KEY, $index, $backup[$key]['valueAttr'])
+                    'value', str_replace(self::INDEX_KEY, (string)$index, $backup[$key]['valueAttr'])
                 );
             }
             if (array_key_exists('id', $backup[$key])) {
-                $child->setId(str_replace(self::INDEX_KEY, $index, $backup[$key]['id']));
+                $child->setId(str_replace(self::INDEX_KEY, (string)$index, $backup[$key]['id']));
             }
             if (array_key_exists('error', $backup[$key])) {
                 $child->setError();
@@ -503,20 +508,26 @@ class HTML_QuickForm2_Container_Repeat extends HTML_QuickForm2_Container
      *
      * @param bool $filtered Whether child elements should apply filters on values
      *
-     * @return   array|null
+     * @return array
      */
-    protected function getChildValues($filtered = false)
+    protected function getChildValues(bool $filtered = false) : array
     {
         $backup = $this->backupChildAttributes();
         $values = array();
-        foreach ($this->getIndexes() as $index) {
+
+        foreach ($this->getIndexes() as $index)
+        {
             $this->replaceIndexTemplates($index, $backup);
-            if (null !== ($itemValues = parent::getChildValues($filtered))) {
+
+            if (null !== ($itemValues = parent::getChildValues($filtered)))
+            {
                 $values = self::arrayMerge($values, $itemValues);
             }
         }
+
         $this->restoreChildAttributes($backup);
-        return empty($values) ? null : $values;
+
+        return $values;
     }
 
     /**
@@ -665,4 +676,3 @@ class HTML_QuickForm2_Container_Repeat extends HTML_QuickForm2_Container
         return $renderer;
     }
 }
-?>

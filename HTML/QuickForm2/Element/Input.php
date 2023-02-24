@@ -19,10 +19,8 @@
  * @link      https://pear.php.net/package/HTML_QuickForm2
  */
 
-// pear-package-only /**
-// pear-package-only  * Base class for simple HTML_QuickForm2 elements (not Containers)
-// pear-package-only  */
-// pear-package-only require_once 'HTML/QuickForm2/Element.php';
+use HTML\QuickForm2\AbstractHTMLElement\GlobalOptions;
+use HTML\QuickForm2\AbstractHTMLElement\WatchedAttributes;
 
 /**
  * Base class for <input> elements
@@ -32,25 +30,15 @@
  * @author   Alexey Borzov <avb@php.net>
  * @author   Bertrand Mansion <golgote@mamasam.com>
  * @license  https://opensource.org/licenses/BSD-3-Clause BSD 3-Clause License
- * @version  Release: @package_version@
- * @link     https://pear.php.net/package/HTML_QuickForm2
  */
 class HTML_QuickForm2_Element_Input extends HTML_QuickForm2_Element
 {
-   /**
-    * 'type' attribute should not be changeable
-    * @var array
-    */
-    protected $watchedAttributes = array('id', 'name', 'type');
-
-    protected function onAttributeChange($name, $value = null)
+    protected function initWatchedAttributes(WatchedAttributes $attributes) : void
     {
-        if ('type' == $name) {
-            throw new HTML_QuickForm2_InvalidArgumentException(
-                "Attribute 'type' is read-only"
-            );
-        }
-        parent::onAttributeChange($name, $value);
+        parent::initWatchedAttributes($attributes);
+
+        $attributes
+            ->setReadonly('type');
     }
 
     public function getType()
@@ -58,7 +46,7 @@ class HTML_QuickForm2_Element_Input extends HTML_QuickForm2_Element
         return $this->attributes['type'];
     }
 
-    public function setValue($value)
+    public function setValue($value) : self
     {
         $this->setAttribute('value', (string)$value);
         return $this;
@@ -85,7 +73,7 @@ class HTML_QuickForm2_Element_Input extends HTML_QuickForm2_Element
     protected function getFrozenHtml()
     {
         $value = $this->getAttribute('value');
-        return (('' != $value)? htmlspecialchars($value, ENT_QUOTES, self::getOption('charset')): '&nbsp;') .
+        return (('' != $value)? htmlspecialchars($value, ENT_QUOTES, GlobalOptions::getCharset()): '&nbsp;') .
                $this->getPersistentContent();
     }
 }

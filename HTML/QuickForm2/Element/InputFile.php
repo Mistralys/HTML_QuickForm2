@@ -49,7 +49,9 @@ class HTML_QuickForm2_Element_InputFile extends HTML_QuickForm2_Element_Input
     */
     protected $value = null;
 
-    protected $attributes = array('type' => 'file');
+    protected array $attributes = array(
+        'type' => 'file'
+    );
 
    /**
     * Message provider for upload error messages
@@ -143,7 +145,7 @@ class HTML_QuickForm2_Element_InputFile extends HTML_QuickForm2_Element_Input
     *
     * @return $this
     */
-    public function setValue($value)
+    public function setValue($value) : self
     {
         return $this;
     }
@@ -190,7 +192,7 @@ class HTML_QuickForm2_Element_InputFile extends HTML_QuickForm2_Element_Input
         } 
     }
 
-    protected function updateValue()
+    protected function updateValue() : self
     {
         $sources = $this->getDataSources();
         
@@ -199,12 +201,14 @@ class HTML_QuickForm2_Element_InputFile extends HTML_QuickForm2_Element_Input
                 $value = $ds->getUpload($this->getName());
                 if (null !== $value) {
                     $this->value = $value;
-                    return;
+                    return $this;
                 }
             }
         }
         
         $this->value = null;
+
+        return $this;
     }
 
    /**
@@ -253,14 +257,14 @@ class HTML_QuickForm2_Element_InputFile extends HTML_QuickForm2_Element_Input
         return parent::validate();
     }
 
-    public function addFilter($callback, array $options = array())
+    public function addFilter(callable $callback, array $options = array()) : self
     {
         throw new HTML_QuickForm2_Exception(
             'InputFile elements do not support filters'
         );
     }
 
-    public function addRecursiveFilter($callback, array $options = array())
+    public function addRecursiveFilter(callable $callback, array $options = array()) : self
     {
         throw new HTML_QuickForm2_Exception(
             'InputFile elements do not support filters'

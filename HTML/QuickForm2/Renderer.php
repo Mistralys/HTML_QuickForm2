@@ -110,7 +110,7 @@ abstract class HTML_QuickForm2_Renderer
     * @throws   HTML_QuickForm2_NotFoundException If class for the renderer can
     *           not be found and/or loaded from file
     */
-    final public static function factory($type)
+    final public static function factory(string $type) : HTML_QuickForm2_Renderer_Proxy
     {
         $type = strtolower($type);
         if (!isset(self::$_types[$type])) {

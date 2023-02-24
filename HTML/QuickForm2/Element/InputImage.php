@@ -37,7 +37,7 @@
  */
 class HTML_QuickForm2_Element_InputImage extends HTML_QuickForm2_Element_Input
 {
-    protected $attributes = array('type' => 'image');
+    protected array $attributes = array('type' => 'image');
 
    /**
     * Coordinates of user click within the image, array contains keys 'x' and 'y'
@@ -65,7 +65,7 @@ class HTML_QuickForm2_Element_InputImage extends HTML_QuickForm2_Element_Input
     *
     * @return $this
     */
-    public function setValue($value)
+    public function setValue($value) : self
     {
         return $this;
     }
@@ -108,7 +108,7 @@ class HTML_QuickForm2_Element_InputImage extends HTML_QuickForm2_Element_Input
         }
     }
 
-    protected function updateValue()
+    protected function updateValue() : self
     {
         foreach ($this->getDataSources() as $ds) {
             if ($ds instanceof HTML_QuickForm2_DataSource_Submit) {
@@ -120,7 +120,7 @@ class HTML_QuickForm2_Element_InputImage extends HTML_QuickForm2_Element_Input
                         'x' => $value,
                         'y' => $ds->getValue($name . '_y')
                     );
-                    return;
+                    return $this;
 
                 } elseif (false !== strpos($name, '[')) {
                     if ('[]' == substr($name, -2)) {
@@ -131,12 +131,14 @@ class HTML_QuickForm2_Element_InputImage extends HTML_QuickForm2_Element_Input
                             'x' => $value[0],
                             'y' => $value[1]
                         );
-                        return;
+                        return $this;
                     }
                 }
             }
         }
+
         $this->coordinates = null;
+
+        return $this;
     }
 }
-?>

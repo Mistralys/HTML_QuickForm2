@@ -49,9 +49,11 @@ class HTML_QuickForm2_Loader
     *
     * @throws   HTML_QuickForm2_NotFoundException   If the file either can't be
     *               loaded or doesn't contain the given class
+    * @deprecated
     */
     public static function loadClass($className, $includeFile = null, $autoload = false)
     {
+        /*
         if (class_exists($className, $autoload) || interface_exists($className, $autoload)) {
             return;
         }
@@ -73,7 +75,7 @@ class HTML_QuickForm2_Loader
                     "Class '$className' was not found within file '$includeFile'"
                 );
             }
-        }
+        }*/
     }
 
    /**

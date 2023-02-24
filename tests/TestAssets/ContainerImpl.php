@@ -13,4 +13,9 @@ class HTML_QuickForm2_ContainerImpl extends HTML_QuickForm2_Container
     public function __toString() { return ''; }
 
     public function validate() { return parent::validate(); }
+
+    public function isNameNullable() : bool
+    {
+        return true;
+    }
 }

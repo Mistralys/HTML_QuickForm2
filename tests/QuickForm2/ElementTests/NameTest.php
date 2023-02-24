@@ -8,9 +8,12 @@ namespace QuickForm2\ElementTests;
 
 use HTML\QuickForm2\AbstractHTMLElement\GlobalOptions;
 use HTML\QuickForm2\AbstractHTMLElement\WatchedAttributes;
+use HTML_QuickForm2;
 use HTML_QuickForm2_Container_Group;
 use HTML_QuickForm2_Element_InputText;
-use HTML_QuickForm2_ElementImpl;
+use HTML_QuickForm2_Event_ElementNameChanged;
+use TestAssets\MockElement;
+use HTML_QuickForm2_Node;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -19,39 +22,46 @@ use PHPUnit\Framework\TestCase;
  */
 final class NameTest extends TestCase
 {
-    public function test_nameNotNull() : void
+    // region: _Tests
+
+    public function test_nameNotNullableException() : void
     {
-        $obj = new HTML_QuickForm2_ElementImpl();
-        $this->assertNotNull($obj->getName(), 'Elements should always have \'name\' attribute');
+        $this->expectExceptionCode(HTML_QuickForm2_Node::ERROR_NAME_IS_NOT_NULLABLE);
+
+        new MockElement();
     }
 
     public function test_setNameInConstructor() : void
     {
-        $obj = new HTML_QuickForm2_ElementImpl('initial_name');
+        $obj = new MockElement('initial_name');
         $this->assertEquals('initial_name', $obj->getName());
     }
 
     public function test_setNameViaMethod() : void
     {
-        $obj = new HTML_QuickForm2_ElementImpl();
+        $obj = new MockElement('foo');
 
-        $this->assertSame($obj, $obj->setName('bar'));
+        $obj->setName('bar');
+
         $this->assertEquals('bar', $obj->getName());
+        $this->assertSame('bar', $obj->getAttribute('name'));
     }
 
     public function test_setNameViaAttribute() : void
     {
-        $obj = new HTML_QuickForm2_ElementImpl();
+        $obj = new MockElement('foo');
 
-        $obj->setAttribute('name', 'baz');
-        $this->assertEquals('baz', $obj->getName());
+        $obj->setAttribute('name', 'bar');
+
+        $this->assertSame('bar', $obj->getName());
+        $this->assertSame('bar', $obj->getAttribute('name'));
     }
 
     public function test_canNotRemoveName() : void
     {
-        $obj = new HTML_QuickForm2_ElementImpl('foo', array(), array('id' => 'foobar'));
+        $obj = new MockElement('foo');
 
-        $this->expectExceptionCode(WatchedAttributes::ERROR_ATTRIBUTE_IS_READONLY);
+        $this->expectExceptionCode(HTML_QuickForm2_Node::ERROR_NAME_IS_NOT_NULLABLE);
 
         $obj->removeAttribute('name');
     }
@@ -59,7 +69,7 @@ final class NameTest extends TestCase
     public function test_updateValueOnNameChange() : void
     {
         $form = new HTML_QuickForm2('form1');
-        $elFoo = $form->appendChild(new HTML_QuickForm2_ElementImpl(self::DEFAULT_NAME));
+        $elFoo = $form->appendChild(new MockElement(self::DEFAULT_NAME));
 
         $elFoo->setName(self::ALTERNATE_NAME);
 
@@ -69,7 +79,7 @@ final class NameTest extends TestCase
     public function test_getArrayKey() : void
     {
         $this->assertSame(
-            (new HTML_QuickForm2_Element_InputText('el1'))->getArrayPath(),
+            (new HTML_QuickForm2_Element_InputText('el1'))->getNamePathRelative(),
             'el1'
         );
 
@@ -88,14 +98,46 @@ final class NameTest extends TestCase
         //
 
         $this->assertSame(
-            (new HTML_QuickForm2_Element_InputText('el1[sub1]'))->getArrayPath(),
-            'el1' // ????
+            (new HTML_QuickForm2_Element_InputText('el1[sub1]'))->getNamePathRelative(),
+            array('el1', 'sub1')
         );
 
         $g1 = new HTML_QuickForm2_Container_Group('g1');
         $g1e1 = $g1->addText('g1e1');
 
-        $this->assertSame('g1', $g1->getArrayPath());
-        $this->assertSame('g1e1', $g1e1->getArrayPath());
+        $this->assertSame('g1', $g1->getNamePathRelative());
+        $this->assertSame('g1e1', $g1e1->getNamePathRelative());
     }
+
+    public function test_event_nameChanged() : void
+    {
+        $el = new MockElement('foo');
+        $el->onNameChanged(array($this, 'callback_nameChanged'));
+
+        $el->setName('bar');
+
+        $this->assertNotNull($this->nameChangedEvent);
+        $this->assertSame('foo', $this->nameChangedEvent->getOldName());
+        $this->assertSame('bar', $this->nameChangedEvent->getNewName());
+    }
+
+    // endregion
+
+    // region: Support methods
+
+    private ?HTML_QuickForm2_Event_ElementNameChanged $nameChangedEvent = null;
+
+    protected function setUp() : void
+    {
+        parent::setUp();
+
+        $this->nameChangedEvent = null;
+    }
+
+    public function callback_nameChanged(HTML_QuickForm2_Event_ElementNameChanged $changed, int $listenerID) : void
+    {
+        $this->nameChangedEvent = $changed;
+    }
+
+    // endregion
 }

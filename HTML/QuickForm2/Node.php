@@ -19,38 +19,12 @@
  * @link      https://pear.php.net/package/HTML_QuickForm2
  */
 
-// pear-package-only /**
-// pear-package-only  * HTML_Common2 - base class for HTML elements
-// pear-package-only  */
-// pear-package-only require_once 'HTML/Common2.php';
-
-// By default, we generate element IDs with numeric indexes appended even for
-// elements with unique names. If you want IDs to be equal to the element
-// names by default, set this configuration option to false.
-if (null === HTML_Common2::getOption('id_force_append_index')) {
-    HTML_Common2::setOption('id_force_append_index', true);
-}
-
-// set the default language for various elements' messages
-if (null === HTML_Common2::getOption('language')) {
-    HTML_Common2::setOption('language', 'en');
-}
-
-// pear-package-only /**
-// pear-package-only  * Exception classes for HTML_QuickForm2
-// pear-package-only  */
-// pear-package-only require_once 'HTML/QuickForm2/Exception.php';
-
-// pear-package-only /**
-// pear-package-only  * Static factory class for QuickForm2 elements
-// pear-package-only  */
-// pear-package-only require_once 'HTML/QuickForm2/Factory.php';
-
-// pear-package-only /**
-// pear-package-only  * Base class for HTML_QuickForm2 rules
-// pear-package-only  */
-// pear-package-only require_once 'HTML/QuickForm2/Rule.php';
-
+use HTML\QuickForm2\AbstractHTMLElement;
+use HTML\QuickForm2\AbstractHTMLElement\GlobalOptions;
+use HTML\QuickForm2\AbstractHTMLElement\WatchedAttributes;
+use HTML\QuickForm2\Interfaces\Events\NameChangesArgInterface;
+use HTML\QuickForm2\Interfaces\Events\NodeArgInterface;
+use HTML\QuickForm2\NameTools;
 
 /**
  * Abstract base class for all QuickForm2 Elements and Containers
@@ -64,22 +38,18 @@ if (null === HTML_Common2::getOption('language')) {
  * @author   Alexey Borzov <avb@php.net>
  * @author   Bertrand Mansion <golgote@mamasam.com>
  * @license  https://opensource.org/licenses/BSD-3-Clause BSD 3-Clause License
- * @version  Release: @package_version@
  * @link     https://pear.php.net/package/HTML_QuickForm2
  */
-abstract class HTML_QuickForm2_Node extends HTML_Common2
+abstract class HTML_QuickForm2_Node extends AbstractHTMLElement
 {
-    const ERROR_CANNOT_REMOVE_NAME_ATTRIBUTE = 38601;
-    
-    const ERROR_CANNOT_REMOVE_ID_ATTRIBUTE = 38602;
-    
-    const ERROR_ID_CANNOT_CONTAIN_SPACES = 38603;
-    
-    const ERROR_CANNOT_SET_CHILD_AS_OWN_CONTAINER = 38604;
-    
-    const ERROR_ADDRULE_INVALID_ARGUMENTS = 38605;
-    
-    const ERROR_FILTER_INVALID_CALLBACK = 38606;
+    public const ERROR_NAME_IS_NOT_NULLABLE = 38601;
+    public const ERROR_CANNOT_REMOVE_ID_ATTRIBUTE = 38602;
+    public const ERROR_ID_CANNOT_CONTAIN_SPACES = 38603;
+    public const ERROR_CANNOT_SET_CHILD_AS_OWN_CONTAINER = 38604;
+    public const ERROR_ADDRULE_INVALID_ARGUMENTS = 38605;
+    public const ERROR_FILTER_INVALID_CALLBACK = 38606;
+    public const ERROR_CANNOT_SET_CONTAINER_WITHOUT_ADDING_ELEMENT = 38607;
+    public const ERROR_CANNOT_SET_NAME_NULL = 38608;
     
    /**
     * Array containing the parts of element ids
@@ -101,9 +71,9 @@ abstract class HTML_QuickForm2_Node extends HTML_Common2
 
    /**
     * Element containing current
-    * @var HTML_QuickForm2_Container
+    * @var HTML_QuickForm2_Container|NULL
     */
-    protected $container = null;
+    protected ?HTML_QuickForm2_Container $container = null;
 
    /**
     * Contains options and data used for the element creation
@@ -139,79 +109,115 @@ abstract class HTML_QuickForm2_Node extends HTML_Common2
     */
     protected $error = null;
 
-   /**
-    * Changing 'name' and 'id' attributes requires some special handling
-    * @var array
-    */
-    protected $watchedAttributes = array('id', 'name');
+    /**
+     * The event handler instance for the form
+     * @var HTML_QuickForm2_EventHandler
+     */
+    protected $eventHandler;
 
-   /**
-    * Intercepts setting 'name' and 'id' attributes
-    *
-    * These attributes should always be present and thus trying to remove them
-    * will result in an exception. Changing their values is delegated to
-    * setName() and setId() methods, respectively
-    *
-    * @param string $name  Attribute name
-    * @param string $value Attribute value, null if attribute is being removed
-    *
-    * @throws   HTML_QuickForm2_InvalidArgumentException    if trying to
-    *                                   remove a required attribute
-    */
-    protected function onAttributeChange($name, $value = null)
-    {
-        if ('name' == $name) {
-            if (null === $value) {
-                throw new HTML_QuickForm2_InvalidArgumentException(
-                    "Required attribute 'name' can not be removed",
-                    self::ERROR_CANNOT_REMOVE_NAME_ATTRIBUTE
-                );
-            } else {
-                $this->setName($value);
-            }
-        } elseif ('id' == $name) {
-            if (null === $value) {
-                throw new HTML_QuickForm2_InvalidArgumentException(
-                    "Required attribute 'id' can not be removed",
-                    self::ERROR_CANNOT_REMOVE_ID_ATTRIBUTE
-                );
-            } else {
-                $this->setId($value);
-            }
-        }
-    }
-
-   /**
-    * Class constructor
-    *
-    * @param string       $name       Element name
-    * @param string|array $attributes HTML attributes (either a string or an array)
-    * @param array        $data       Element data (label, options used for element setup)
-    */
-    public function __construct($name = null, $attributes = null, array $data = array())
+    /**
+     * Class constructor
+     *
+     * @param string|null $name Element name
+     * @param array<string|number,string|number>|null $attributes HTML attributes (either a string or an array)
+     * @param array $data Element data (label, options used for element setup)
+     */
+    public function __construct(?string $name = null, ?array $attributes = null, array $data = array())
     {
         parent::__construct($attributes);
-        
+
+        $this->initDone = false;
+        $this->eventHandler = new HTML_QuickForm2_EventHandler($this);
+
+        if(empty($name) && !$this->isNameNullable())
+        {
+            throw new HTML_QuickForm2_InvalidArgumentException(
+                'Elements of this type must be given a name.',
+                self::ERROR_NAME_IS_NOT_NULLABLE
+            );
+        }
+
         $this->setName($name);
-        
-        // Autogenerating the id if not set on previous steps
+
+        $this->initializeID();
+
+        if (!empty($data)) {
+            $this->data = array_merge($this->data, $data);
+        }
+
+        $this->log('Init | Custom node init');
+        $this->initNode();
+
+        $this->log('Init | Done.');
+
+        $this->initDone = true;
+    }
+
+    // region: Watched attributes
+
+    protected function handleAttributeChanged(string $name, ?string $oldValue, ?string $newValue) : void
+    {
+        $this->triggerAttributeChanged($name, $oldValue, $newValue);
+    }
+
+    protected function initWatchedAttributes(WatchedAttributes $attributes) : void
+    {
+        $attributes
+            ->setWatched('id', Closure::fromCallable(array($this, 'handle_idAttributeChanged')))
+            ->setWatched('name', Closure::fromCallable(array($this, 'handle_nameAttributeChanged')));
+    }
+
+    protected function handle_nameAttributeChanged(?string $value) : void
+    {
+        $this->setNameViaAttribute($value);
+    }
+
+    protected function handle_idAttributeChanged(?string $value) : void
+    {
+        if (!empty($value))
+        {
+            $this->_setAttribute('id', $value);
+            return;
+        }
+
+        throw new HTML_QuickForm2_InvalidArgumentException(
+            "Required attribute [id] can not be removed or set to an empty value.",
+            self::ERROR_CANNOT_REMOVE_ID_ATTRIBUTE
+        );
+    }
+
+    // endregion
+
+    public function getLogIdentifier() : string
+    {
+        $tokens = explode('_', get_class($this));
+        $label = array_pop($tokens).$this->instanceID;
         $id = $this->getId();
-        if ('' == $id) 
+
+        if(!empty($id))
+        {
+            $label .= ' [ID '.$id.']';
+        }
+
+        return $label;
+    }
+
+    private function initializeID() : void
+    {
+        $this->log('Init | Generating the ID');
+
+        // Auto-generating the id if not set on previous steps.
+        $id = $this->getId();
+        if (empty($id))
         {
             $this->setId();
         }
         // if the ID uses hyphens like the auto-generated IDs,
         // we need to make sure we don't generate the same.
-        else if(stristr($id, '-')) 
+        else if(strpos($id, '-') !== false)
         {
             self::parseID($id);
         }
-        
-        if (!empty($data)) {
-            $this->data = array_merge($this->data, $data);
-        }
-        
-        $this->initNode();
     }
     
    /**
@@ -223,7 +229,10 @@ abstract class HTML_QuickForm2_Node extends HTML_Common2
     {
     
     }
-    
+
+    /**
+     * @var array<string,int>
+     */
     protected static $elementIDs = array();
     
    /**
@@ -231,13 +240,14 @@ abstract class HTML_QuickForm2_Node extends HTML_Common2
     *
     * Called when an element is created without explicitly given id
     *
-    * @param string $elementName Element name
+    * @param string|NULL $elementName Element name
     *
     * @return string The generated element id
     */
-    protected static function generateId($elementName)
+    protected static function generateId(?string $elementName) : string
     {
-        if(empty($elementName)) {
+        if(empty($elementName))
+        {
             $elementName = 'qfauto';
         }
         
@@ -251,12 +261,14 @@ abstract class HTML_QuickForm2_Node extends HTML_Common2
         // element[name] => element-name
         // element[name][] => element-name
         //
-        if(stristr($baseID, '[')) {
+        if(strpos($baseID, '[') !== false)
+        {
             $baseID = rtrim(str_replace(array('[', ']'), '-', $elementName), '-');
         }
         
         // avoid IDs that start with numbers.
-        if(is_numeric(substr($baseID, 0, 1))) {
+        if(is_numeric($baseID[0]))
+        {
             $baseID = 'qf'.$baseID;
         }
         
@@ -265,7 +277,8 @@ abstract class HTML_QuickForm2_Node extends HTML_Common2
             self::$elementIDs[$baseID] = 0;
             
             // only append the number if it has been explicitly set.
-            if(self::getOption('id_force_append_index')) {
+            if(GlobalOptions::isIDAppendEnabled())
+            {
                 $baseID .= '-'.self::$elementIDs[$baseID];
             }
         } 
@@ -350,69 +363,184 @@ abstract class HTML_QuickForm2_Node extends HTML_Common2
     */
     abstract public function getType();
 
+    // region: Element name handling
 
    /**
-    * Returns the element's name
+    * Returns the element's name, if any.
     *
-    * @return   string
+    * @return string|NULL
     */
-    public function getName()
+    public function getName() : ?string
     {
-        return isset($this->attributes['name'])? $this->attributes['name']: null;
+        return $this->getAttribute('name');
     }
 
+    protected ?string $baseName = null;
 
-   /**
-    * Sets the element's name
-    *
-    * @param string $name
-    *
-    * @return $this
-    */
-    abstract public function setName($name);
+    /**
+     * Returns the element's name without the container's
+     * prefix (if any).
+     *
+     * Examples:
+     *
+     * foo => foo
+     * containerName[foo] > foo
+     * containerName[foo][sub] > foo[sub]
+     *
+     * @return string
+     */
+    public function getBaseName() : ?string
+    {
+        return $this->baseName;
+    }
 
+    /**
+     * Sets the element's name, or removes it (if allowed).
+     *
+     * @param string|NULL $name Set to NULL to remove the name.
+     *
+     * @return $this
+     * @throws HTML_QuickForm2_InvalidArgumentException
+     */
+    public function setName(?string $name) : self
+    {
+        // Unchanged, ignore
+        if($this->baseName === $name)
+        {
+            return $this;
+        }
+
+        if($name === null && !$this->isNameNullable())
+        {
+            throw new HTML_QuickForm2_InvalidArgumentException(
+                'Name cannot be set to a null value for this element type.',
+                self::ERROR_CANNOT_SET_NAME_NULL
+            );
+        }
+
+        $oldName = $this->baseName;
+        $this->baseName = $name;
+
+        $this->updateNameAttribute();
+        $this->updateValue();
+
+        $this->triggerNameChanged($oldName, $name);
+
+        return $this;
+    }
+
+    protected function setNameViaAttribute(?string $name) : void
+    {
+        $this->setName($name);
+    }
+
+    private function updateNameAttribute() : void
+    {
+        $name = NameTools::generateName($this->getBaseName(), $this->getContainer());
+
+        if($name === null)
+        {
+            $this->_removeAttribute('name');
+        }
+        else
+        {
+            $this->_setAttribute('name', $name);
+        }
+    }
+
+    abstract public function isNameNullable() : bool;
+
+    /**
+     * Retrieves the names of the keys under
+     * which the element's value is stored
+     * in a value array (from a submitted form
+     * or an array data source).
+     *
+     * Since elements can be stored in arrays
+     * in a form, this returns an array of keys.
+     *
+     * Examples of element names:
+     *
+     * - (without name) > NULL
+     * - foo > array('foo')
+     * - foo[bar] > array('foo', 'bar')
+     * - foo[bar][sub] > array('foo', 'bar', 'sub')
+     *
+     * @return string[]
+     */
+    public function getNamePathRelative() : array
+    {
+        $name = $this->getBaseName();
+
+        if($name !== null)
+        {
+            return NameTools::parseName($name)->getNamePath();
+        }
+
+        return array();
+    }
+
+    public function getNamePath() : array
+    {
+        $name = $this->getName();
+
+        if($name !== null)
+        {
+            return NameTools::parseName($name)->getNamePath();
+        }
+
+        return array();
+    }
+
+    // endregion
 
    /**
     * Returns the element's id
     *
-    * @return   string
+    * @return string|NULL
     */
-    public function getId()
+    public function getId() : ?string
     {
-        return isset($this->attributes['id'])? $this->attributes['id']: null;
+        return $this->attributes['id'] ?? null;
     }
 
-
-   /**
-    * Sets the element's id
-    *
-    * Please note that elements should always have an id in QuickForm2 and
-    * therefore it will not be possible to remove the element's id or set it to
-    * an empty value. If id is not explicitly given, it will be autogenerated.
-    *
-    * @param string $id Element's id, will be autogenerated if not given
-    *
-    * @return HTML_QuickForm2_Node
-    * @throws   HTML_QuickForm2_InvalidArgumentException if id contains invalid
-    *           characters (i.e. spaces)
-    */
-    public function setId($id = null)
+    /**
+     * Sets the element's id
+     *
+     * Please note that elements should always have an id in QuickForm2 and
+     * therefore it will not be possible to remove the element's id or set it to
+     * an empty value. If id is not explicitly given, it will be autogenerated.
+     *
+     * @param string|null $id Element's id, will be autogenerated if not given
+     *
+     * @return $this
+     * @throws HTML_QuickForm2_InvalidArgumentException if id contains invalid
+     *           characters (i.e. spaces)
+     */
+    public function setId(?string $id = null) : self
     {
-        if (is_null($id)) {
+        if (is_null($id))
+        {
             $id = self::generateId($this->getName());
-        // HTML5 specification only disallows having space characters in id,
+        }
+        // The HTML5 specification only disallows having space characters in id,
         // so we don't do stricter checks here
-        } elseif (strpbrk($id, " \r\n\t\x0C")) {
+        elseif (strpbrk($id, " \r\n\t\x0C"))
+        {
             throw new HTML_QuickForm2_InvalidArgumentException(
                 "The value of 'id' attribute should not contain space characters",
                 self::ERROR_ID_CANNOT_CONTAIN_SPACES
             );
-        } else {
+        }
+        else
+        {
             self::storeId($id);
         }
+
         $this->attributes['id'] = (string)$id;
         
-        if(isset($this->container)) {
+        if(isset($this->container))
+        {
             $this->container->invalidateLookup();
         }
         
@@ -445,20 +573,17 @@ abstract class HTML_QuickForm2_Node extends HTML_Common2
     *
     * @return $this
     */
-    abstract public function setValue($value);
+    abstract public function setValue($value) : self;
 
 
    /**
     * Returns the element's label(s)
     *
-    * @return   string|array
+    * @return string|array
     */
     public function getLabel()
     {
-        if (isset($this->data['label'])) {
-            return $this->data['label'];
-        }
-        return null;
+        return $this->data['label'] ?? null;
     }
 
 
@@ -516,53 +641,200 @@ abstract class HTML_QuickForm2_Node extends HTML_Common2
         return $old;
     }
 
+    // region: Event handling
 
-   /**
-    * Adds the link to the element containing current
-    *
-    * @param HTML_QuickForm2_Container $container Element containing
-    *                           the current one, null if the link should
-    *                           really be removed (if removing from container)
-    *
-    * @throws   HTML_QuickForm2_InvalidArgumentException   If trying to set a
-    *                               child of an element as its container
-    */
-    protected function setContainer(HTML_QuickForm2_Container $container = null)
+    public const EVENT_CONTAINER_CHANGED = 'ContainerChanged';
+    public const EVENT_NAME_CHANGED = 'ElementNameChanged';
+    public const EVENT_ATTRIBUTE_CHANGED = 'AttributeChanged';
+
+    /**
+     * Adds a listener for whenever the element's container
+     * is modified (set, removed, or replaced).
+     *
+     * The callback function gets the following parameters:
+     *
+     * 1. The event instance, {@see HTML_QuickForm2_Event_ContainerChanged}.
+     * 2. The listener ID.
+     * 3. [Optional] Parameters specified here as function arguments.
+     *
+     * Example callback function:
+     *
+     * <pre>
+     * function handleNameChanged(HTML_QuickForm2_Event_ElementNameChanged $event, int $listenerID) : void {}
+     * </pre>
+     *
+     * @param callable $callback
+     * @param array<int,mixed> $params
+     * @return int
+     * @throws HTML_QuickForm2_InvalidEventException
+     */
+    public function onContainerChanged(callable $callback, array $params=array()) : int
     {
-        if($this->hasContainerParent($container)) {
+        return $this->eventHandler->addHandler(
+            self::EVENT_CONTAINER_CHANGED,
+            $callback,
+            $params
+        );
+    }
+
+    /**
+     * Adds a listener for whenever the element's name has
+     * been modified.
+     *
+     * The callback function gets the following parameters:
+     *
+     * 1. The event instance, {@see HTML_QuickForm2_Event_ElementNameChanged}.
+     * 2. The listener ID.
+     * 3. [Optional] Parameters specified here as function arguments.
+     *
+     * Example callback function:
+     *
+     * <pre>
+     * function handleNameChanged(HTML_QuickForm2_Event_ElementNameChanged $event, int $listenerID) : void {}
+     * </pre>
+     *
+     * @param callable $callback
+     * @param array<int,mixed> $params
+     * @return int
+     * @throws HTML_QuickForm2_InvalidEventException
+     */
+    public function onNameChanged(callable $callback, array $params=array()) : int
+    {
+        return $this->eventHandler->addHandler(
+            self::EVENT_NAME_CHANGED,
+            $callback,
+            $params
+        );
+    }
+
+    /**
+     * Adds a listener for whenever the value of an attribute of
+     * the element changes.
+     *
+     * The callback function gets the following parameters:
+     *
+     * 1. The event instance, {@see HTML_QuickForm2_Event_AttributeChanged}.
+     * 2. The listener ID.
+     * 3. [Optional] Parameters specified here as function arguments.
+     *
+     * Example callback function:
+     *
+     * <pre>
+     * function handleAttributeChanged(HTML_QuickForm2_Event_AttributeChanged $event, int $listenerID) : void {}
+     * </pre>
+     *
+     * @param callable $callback
+     * @param array<int,mixed> $params
+     * @return int
+     * @throws HTML_QuickForm2_InvalidEventException
+     */
+    public function onAttributeChanged(callable $callback, array $params=array()) : int
+    {
+        return $this->eventHandler->addHandler(
+            self::EVENT_ATTRIBUTE_CHANGED,
+            $callback,
+            $params
+        );
+    }
+
+    private function triggerContainerChanged(?HTML_QuickForm2_Container $old, ?HTML_QuickForm2_Container $new) : void
+    {
+        $this->updateNameAttribute();
+
+        $this->eventHandler->triggerEvent(
+            self::EVENT_CONTAINER_CHANGED,
+            array(
+                NodeArgInterface::KEY_NODE => $this,
+                HTML_QuickForm2_Event_ContainerChanged::KEY_OLD_CONTAINER => $old,
+                HTML_QuickForm2_Event_ContainerChanged::KEY_NEW_CONTAINER => $new
+            )
+        );
+    }
+
+    private function triggerNameChanged(?string $oldName, ?string $newName) : void
+    {
+        $this->eventHandler->triggerEvent(
+            self::EVENT_NAME_CHANGED,
+            array(
+                NodeArgInterface::KEY_NODE => $this,
+                NameChangesArgInterface::KEY_OLD_NAME => $oldName,
+                NameChangesArgInterface::KEY_NEW_NAME => $newName
+            )
+        );
+    }
+
+    private function triggerAttributeChanged(string $name, ?string $oldValue, ?string $newValue) : void
+    {
+        $this->eventHandler->triggerEvent(
+            self::EVENT_ATTRIBUTE_CHANGED,
+            array(
+                NodeArgInterface::KEY_NODE => $this,
+                HTML_QuickForm2_Event_AttributeChanged::KEY_ATTRIBUTE_NAME => $name,
+                HTML_QuickForm2_Event_AttributeChanged::KEY_OLD_VALUE => $oldValue,
+                HTML_QuickForm2_Event_AttributeChanged::KEY_NEW_VALUE => $newValue
+            )
+        );
+    }
+
+    // endregion
+
+
+
+    /**
+     * Adds the link to the element containing current
+     *
+     * @param HTML_QuickForm2_Container|null $container Element containing
+     *                           the current one, null if the link should
+     *                           really be removed (if removing from container)
+     *
+     * @return HTML_QuickForm2_Node
+     * @throws HTML_QuickForm2_InvalidArgumentException If trying to set a
+     *                               child of an element as its container
+     */
+    public function setContainer(?HTML_QuickForm2_Container $container = null) : self
+    {
+        if($container !== null && $this->hasContainerParent($container))
+        {
             throw new HTML_QuickForm2_InvalidArgumentException(
                 'Cannot set an element or its child as its own container',
                 self::ERROR_CANNOT_SET_CHILD_AS_OWN_CONTAINER
             );
         }
+
+        if($container !== null && !$container->hasChild($this))
+        {
+            throw new HTML_QuickForm2_InvalidArgumentException(
+                'Cannot set the container of an element without adding the element to it.',
+                self::ERROR_CANNOT_SET_CONTAINER_WITHOUT_ADDING_ELEMENT
+            );
+        }
         
         $previous = $this->getContainer();
         
-        // this element already has that same container
-        if($previous === $container) {
-            return;
+        // Ignore, this element already has that same container
+        if($previous === $container)
+        {
+            return $this;
         }
-        
-        // tell the original container to remove this element
-        if($previous !== null) {
-            $previous->removeChild($this);
-        }
-        
+
         $this->container = $container;
 
-        if( $container !== null) {
-            $this->updateValue();
-        }
-        
-        return;
+        $this->triggerContainerChanged($previous, $container);
+
+        $this->updateValue();
+
+        return $this;
     }
-    
-    public function hasContainerParent(HTML_QuickForm2_Container $container = null)
+
+    /**
+     * Checks whether the element has the specified container
+     * anywhere in its parent hierarchy.
+     *
+     * @param HTML_QuickForm2_Container $container
+     * @return bool
+     */
+    public function hasContainerParent(HTML_QuickForm2_Container $container) : bool
     {
-        if($container === null) {
-            return false;
-        }
-        
         $check = $container;
         
         // go up through all parent containers from this
@@ -584,7 +856,7 @@ abstract class HTML_QuickForm2_Node extends HTML_Common2
     *
     * @return   HTML_QuickForm2_Container|null
     */
-    public function getContainer()
+    public function getContainer() : ?HTML_QuickForm2_Container
     {
         return $this->container;
     }
@@ -592,21 +864,24 @@ abstract class HTML_QuickForm2_Node extends HTML_Common2
    /**
     * Returns the data sources for this element
     *
-    * @return   array
+    * @return HTML_QuickForm2_DataSource[]
     */
-    protected function getDataSources()
+    public function getDataSources() : array
     {
-        if (empty($this->container)) {
+        if (!isset($this->container))
+        {
             return array();
-        } else {
-            return $this->container->getDataSources();
         }
+
+        return $this->container->getDataSources();
     }
 
    /**
     * Called when the element needs to update its value from form's data sources
+    *
+    * @return $this
     */
-    abstract protected function updateValue();
+    abstract protected function updateValue() : self;
 
    /**
     * Adds a validation rule
@@ -821,10 +1096,10 @@ abstract class HTML_QuickForm2_Node extends HTML_Common2
      *                       will always be the element value, then these options will
      *                       be used as parameters for the callback.
      *
-     * @return HTML_QuickForm2_Node    The element
+     * @return $this    The element
      * @throws   HTML_QuickForm2_InvalidArgumentException    If callback is incorrect
      */
-    public function addFilter($callback, array $options = array())
+    public function addFilter(callable $callback, array $options = array()) : self
     {
         $callbackName = null;
         if (!is_callable($callback, false, $callbackName)) {
@@ -854,10 +1129,10 @@ abstract class HTML_QuickForm2_Node extends HTML_Common2
      *                       will always be the element value, then these options will
      *                       be used as parameters for the callback.
      *
-     * @return HTML_QuickForm2_Node    The element
+     * @return $this    The element
      * @throws   HTML_QuickForm2_InvalidArgumentException    If callback is incorrect
      */
-    public function addRecursiveFilter($callback, array $options = array())
+    public function addRecursiveFilter(callable $callback, array $options = array()) : self
     {
         $callbackName = null;
         if (!is_callable($callback, false, $callbackName)) {
@@ -1039,5 +1314,40 @@ abstract class HTML_QuickForm2_Node extends HTML_Common2
     public function preRender()
     {
         
+    }
+
+    protected function valueToHTML(?string $value) : string
+    {
+        if($value === null)
+        {
+            return '';
+        }
+
+        return preg_replace(
+            "/(\r\n|\n|\r)/",
+            '&#010;',
+            self::HTMLSpecialChars($value)
+        );
+    }
+
+    public function getPath() : string
+    {
+        $parts = array();
+        $container = $this->getContainer();
+
+        if($container !== null)
+        {
+            $parts[] = $container->getPath();
+        }
+
+        $id = $this->getId();
+        if(empty($id))
+        {
+            $id = 'i'.$this->getInstanceID();
+        }
+
+        $parts[] = str_replace('.', '_', $id);
+
+        return implode('.', $parts);
     }
 }

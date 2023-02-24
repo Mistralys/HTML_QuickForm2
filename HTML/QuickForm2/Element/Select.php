@@ -27,6 +27,7 @@
 // pear-package-only  * Class representing an <optgroup> tag
 // pear-package-only  */
 // pear-package-only require_once 'HTML/QuickForm2/Element/Select/Optgroup.php';
+use HTML\QuickForm2\AbstractHTMLElement\GlobalOptions;
 
 /**
  * Class representing a <select> element
@@ -115,7 +116,7 @@ class HTML_QuickForm2_Element_Select extends HTML_QuickForm2_Element
             }
             $indent = $this->getIndent();
             return $indent . '<select' . $attrString . '>' .
-                   self::getOption('linebreak') .
+                   GlobalOptions::getLineBreak() .
                    $this->optionContainer->__toString() .
                    $indent . '</select>';
         }
@@ -203,7 +204,7 @@ class HTML_QuickForm2_Element_Select extends HTML_QuickForm2_Element
         }
     }
 
-    public function setValue($value)
+    public function setValue($value) : self
     {
         if (is_array($value)) {
             $this->values = array_values($value);
@@ -317,23 +318,29 @@ class HTML_QuickForm2_Element_Select extends HTML_QuickForm2_Element
         return $this->optionContainer->addOptgroup($label, $attributes);
     }
 
-    protected function updateValue()
+    protected function updateValue() : self
     {
-        if (!$this->getAttribute('multiple')) {
-            parent::updateValue();
-        } else {
-            $name = $this->getName();
-            /* @var $ds HTML_QuickForm2_DataSource_NullAware */
-            foreach ($this->getDataSources() as $ds) {
-                if (null !== ($value = $ds->getValue($name))
-                    || $ds instanceof HTML_QuickForm2_DataSource_Submit
-                    || ($ds instanceof HTML_QuickForm2_DataSource_NullAware && $ds->hasValue($name))
-                ) {
-                    $this->setValue((array)$value);
-                    return;
-                }
+        if (!$this->getAttribute('multiple'))
+        {
+            return parent::updateValue();
+        }
+
+        $name = $this->getName();
+
+        foreach ($this->getDataSources() as $ds)
+        {
+            $value = $ds->getValue($name);
+
+            if ($value !== null
+                || $ds instanceof HTML_QuickForm2_DataSource_Submit
+                || ($ds instanceof HTML_QuickForm2_DataSource_NullAware && $ds->hasValue($name))
+            ) {
+                $this->setValue((array)$value);
+                return $this;
             }
         }
+
+        return $this;
     }
 
     /**

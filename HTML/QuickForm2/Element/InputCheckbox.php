@@ -37,7 +37,9 @@
  */
 class HTML_QuickForm2_Element_InputCheckbox extends HTML_QuickForm2_Element_InputCheckable
 {
-    protected $attributes = array('type' => 'checkbox');
+    protected array $attributes = array(
+        'type' => 'checkbox'
+    );
 
     protected $frozenHtml = array(
         'checked'   => '<code>[x]</code>',
@@ -47,12 +49,19 @@ class HTML_QuickForm2_Element_InputCheckbox extends HTML_QuickForm2_Element_Inpu
     public function __construct($name = null, $attributes = null, array $data = array())
     {
         parent::__construct($name, $attributes, $data);
-        if (null === $this->getAttribute('value')) {
-            $this->setAttribute('value', 1);
+
+        $this->initValue();
+    }
+
+    private function initValue() : void
+    {
+        if ($this->getAttribute('value') === null)
+        {
+            $this->setAttribute('value', '1');
         }
     }
 
-    protected function updateValue()
+    protected function updateValue() : self
     {
         $name = $this->getName();
         if ('[]' == substr($name, -2)) {
@@ -66,17 +75,19 @@ class HTML_QuickForm2_Element_InputCheckbox extends HTML_QuickForm2_Element_Inpu
                 if (!is_array($value)) {
                     $this->setValue($value);
                 } elseif (in_array($this->getAttribute('value'), array_map('strval', $value), true)) {
-                    $this->setAttribute('checked');
+                    $this->setChecked(true);
                 } else {
-                    $this->removeAttribute('checked');
+                    $this->setChecked(false);
                 }
-                return;
+                return $this;
             }
         }
         // if *some* data sources were searched and we did not find a value -> uncheck the box
-        if (!empty($ds)) {
-            $this->removeAttribute('checked');
+        if (!empty($ds))
+        {
+            $this->setChecked(false);
         }
+
+        return $this;
     }
 }
-?>

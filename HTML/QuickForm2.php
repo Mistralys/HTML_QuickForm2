@@ -1,23 +1,16 @@
 <?php
 /**
- * Class representing a HTML form
+ * File containing the class {@see HTML_QuickForm2}.
  *
- * PHP version 5
- *
- * LICENSE
- *
- * This source file is subject to BSD 3-Clause License that is bundled
- * with this package in the file LICENSE and available at the URL
- * https://raw.githubusercontent.com/pear/HTML_QuickForm2/trunk/docs/LICENSE
- *
- * @category  HTML
- * @package   HTML_QuickForm2
- * @author    Alexey Borzov <avb@php.net>
- * @author    Bertrand Mansion <golgote@mamasam.com>
- * @copyright 2006-2020 Alexey Borzov <avb@php.net>, Bertrand Mansion <golgote@mamasam.com>
- * @license   https://opensource.org/licenses/BSD-3-Clause BSD 3-Clause License
- * @link      https://pear.php.net/package/HTML_QuickForm2
+ * @category HTML
+ * @package HTML_QuickForm2
+ * @see HTML_QuickForm2
  */
+
+use HTML\QuickForm2\AbstractHTMLElement\WatchedAttributes;
+use HTML\QuickForm2\Interfaces\Events\ContainerArgInterface;
+use HTML\QuickForm2\Interfaces\Events\FormArgInterface;
+use HTML\QuickForm2\Interfaces\Events\NodeArgInterface;
 
 /**
  * Class representing a HTML form
@@ -27,67 +20,173 @@
  * @author   Alexey Borzov <avb@php.net>
  * @author   Bertrand Mansion <golgote@mamasam.com>
  * @license  https://opensource.org/licenses/BSD-3-Clause BSD 3-Clause License
- * @version  Release: @package_version@
  * @link     https://pear.php.net/package/HTML_QuickForm2
  */
 class HTML_QuickForm2 extends HTML_QuickForm2_Container
 {
-   /**
+    public const ERROR_CANNOT_ADD_FORM_TO_CONTAINER = 103601;
+
+    /**
     * Data sources providing values for form elements
     * @var array
     */
-    protected $datasources = array();
+    protected array $datasources = array();
+
+    protected array $attributes = array(
+        'method' => 'post'
+    );
+
+    protected $dataReason;
 
    /**
-    * We do not allow setting "method" and "id" other than through constructor
-    * @var array
-    */
-    protected $watchedAttributes = array('id', 'method');
-    
-   /**
-    * The event handler instance for the form
-    * @var HTML_QuickForm2_EventHandler
-    */
-    protected $eventHandler;
-    
-    protected $dataReason;
-    
-   /**
-    * Class constructor, form's "id" and "method" attributes can only be set here
+    * NOTE: The form's "id" and "method" attributes can only
+    * be set here. Changing them afterwards will throw an exception.
     *
-    * @param string       $id          "id" attribute of <form> tag
-    * @param string       $method      HTTP method used to submit the form
-    * @param string|array $attributes  Additional HTML attributes
-    *                                  (either a string or an array)
-    * @param bool         $trackSubmit Whether to track if the form was submitted
-    *                                  by adding a special hidden field
+    * @param string|NULL  $id "id" attribute of <form> tag.
+    * @param string $method HTTP method used to submit the form - "post" or "get".
+    * @param string|array $attributes Additional HTML attributes (either a string or an array)
     */
-    public function __construct(
-        $id, $method = 'post', $attributes = null, $trackSubmit = true
-    ) {
-        $this->eventHandler = new HTML_QuickForm2_EventHandler($this);
-        $method      = ('GET' == strtoupper($method))? 'get': 'post';
-        $trackSubmit = empty($id) ? false : $trackSubmit;
-        
-        $this->attributes = array_merge(
-            self::prepareAttributes($attributes),
-            array('method' => $method)
+    public function __construct(?string $id, string $method = 'post', $attributes = null)
+    {
+        parent::__construct();
+
+        $this->log('Creating a new form with ID [%s]', $id);
+
+        $this->initAttributes($id, $method, self::prepareAttributes($attributes));
+        $this->initDatasources();
+        $this->initTracking();
+
+        $this->addFilter(array($this, 'skipInternalFields'));
+    }
+
+    // region: Event handling
+
+    public const EVENT_FORM_NODE_ADDED = 'FormNodeAdded';
+
+    /**
+     * Called automatically whenever a container in the
+     * form adds a new node. This in turn triggers the
+     * form's node added event.
+     *
+     * @param HTML_QuickForm2_Container $container
+     * @param HTML_QuickForm2_Node $element
+     * @return void
+     *
+     * @throws HTML_QuickForm2_InvalidEventException
+     *
+     * @see HTML_QuickForm2_Container::onNodeAdded()
+     */
+    public function handle_nodeAdded(HTML_QuickForm2_Container $container, HTML_QuickForm2_Node $element) : void
+    {
+        $this->eventHandler->triggerEvent(
+            self::EVENT_FORM_NODE_ADDED,
+            array(
+                FormArgInterface::KEY_FORM => $this,
+                ContainerArgInterface::KEY_CONTAINER => $container,
+                NodeArgInterface::KEY_NODE => $element
+            )
         );
-        
-        parent::setId(empty($id) ? null : $id);
-        
-        if(!isset($this->attributes['action'])) {
-            $this->attributes['action'] = $_SERVER['PHP_SELF'];
+    }
+
+    /**
+     * Adds an event listener for whenever a new node is
+     * added to the form, or any of its child containers.
+     *
+     * The callback method gets the following parameters:
+     *
+     * - Event instance, {@see HTML_QuickForm2_Event_FormNodeAdded}
+     * - [Optional] List of event listener function arguments.
+     *
+     * Example listener function:
+     *
+     * <pre>
+     * function(HTML_QuickForm2_Event_FormNodeAdded $event, ...$args) : void {}
+     * </pre>
+     *
+     * @param callable $callback
+     * @param array<int,mixed> $args
+     * @return int
+     *
+     * @throws HTML_QuickForm2_InvalidEventException
+     */
+    public function onFormNodeAdded(callable $callback, array $args=array()) : int
+    {
+        return $this->eventHandler->addHandler(
+            self::EVENT_FORM_NODE_ADDED,
+            $callback,
+            $args
+        );
+    }
+
+    // endregion
+
+    protected function initWatchedAttributes(WatchedAttributes $attributes) : void
+    {
+        parent::initWatchedAttributes($attributes);
+
+        $attributes->setReadonly('id');
+        $attributes->setReadonly('method');
+    }
+
+    public function isAttributeReadonly(string $name) : bool
+    {
+        return $this->watchedAttributes->isReadonly($name);
+    }
+
+    private function initTracking() : void
+    {
+        $this->log('Init | TrackingVar | Adding the tracking variable.');
+
+        $this->appendChild(HTML_QuickForm2_Factory::createElement(
+            'hidden',
+            $this->getTrackingVarName(),
+            array(
+                'id' => 'qf:' . $this->getId()
+            )
+        ));
+    }
+
+    private function initAttributes(?string $id, string $method, array $attributes) : void
+    {
+        $this->log('Init | Populating default attributes.');
+
+        if($id !== null)
+        {
+            $this->attributes['id'] = $id;
         }
 
-        $trackVarFound = isset($_REQUEST['_qf__' . $id]);
-        $getNotEmpty = 'get' == $method && !empty($_GET);
-        $postNotEmpty = 'post' == $method && (!empty($_POST) || !empty($_FILES));
-        
-        // automatically add the superglobals datasource to access
-        // submitted form values, if data is present.
-        if($trackSubmit && $trackVarFound || !$trackSubmit && ($getNotEmpty || $postNotEmpty))
+        if(strtolower($method) === 'get')
         {
+            $this->attributes['method'] = 'get';
+        }
+
+        $this->attributes = array_merge(
+            self::prepareAttributes($attributes),
+            $this->attributes
+        );
+
+        if(!isset($this->attributes['action']))
+        {
+            $this->attributes['action'] = $_SERVER['PHP_SELF'];
+        }
+    }
+
+    private function initDataSources() : void
+    {
+        $this->log('Init | DataSources | Resolving data sources.');
+
+        $method = $this->getMethod();
+        $getNotEmpty = 'get' === $method && !empty($_GET);
+        $postNotEmpty = 'post' === $method && (!empty($_POST) || !empty($_FILES));
+        $trackVar = $this->getTrackingVarName();
+        $trackVarFound = isset($_REQUEST[$trackVar]);
+
+        // automatically add the super globals datasource to access
+        // submitted form values, if data is present.
+        if($trackVarFound)
+        {
+            $this->log('Init | DataSources | Adding super global source.');
+
             $this->addDataSource(new HTML_QuickForm2_DataSource_SuperGlobal($method));
         }
 
@@ -96,14 +195,21 @@ class HTML_QuickForm2 extends HTML_QuickForm2_Container
             'getNotEmpty' => $getNotEmpty,
             'postNotEmpty' => $postNotEmpty
         );
-        
-        if($trackSubmit) {
-            $this->appendChild(HTML_QuickForm2_Factory::createElement(
-                'hidden', '_qf__' . $id, array('id' => 'qf:' . $id)
-            ));
-        }
-        
-        $this->addFilter(array($this, 'skipInternalFields'));
+    }
+
+    public function getTrackingVarName() : string
+    {
+        return self::generateTrackingVarName($this->getId());
+    }
+
+    public static function generateTrackingVarName(string $id) : string
+    {
+        return '_qf__' . $id;
+    }
+
+    public function getMethod() : string
+    {
+        return $this->getAttribute('method');
     }
     
     public function getDataReason()
@@ -111,35 +217,25 @@ class HTML_QuickForm2 extends HTML_QuickForm2_Container
         return $this->dataReason;
     }
 
-    protected function onAttributeChange($name, $value = null)
+    public function setContainer(HTML_QuickForm2_Container $container = null) : self
     {
-        throw new HTML_QuickForm2_InvalidArgumentException(
-            'Attribute \'' . $name . '\' is read-only'
+        throw new HTML_QuickForm2_Exception(
+            'The form itself cannot be added to a container.',
+            self::ERROR_CANNOT_ADD_FORM_TO_CONTAINER
         );
     }
-
-    protected function setContainer(HTML_QuickForm2_Container $container = null)
-    {
-        throw new HTML_QuickForm2_Exception('Form cannot be added to container');
-    }
-
-    public function setId($id = null)
-    {
-        throw new HTML_QuickForm2_InvalidArgumentException(
-            "Attribute 'id' is read-only"
-        );
-    }
-
 
    /**
     * Adds a new data source to the form
     *
     * @param HTML_QuickForm2_DataSource $datasource Data source
+    * @return $this
     */
-    public function addDataSource(HTML_QuickForm2_DataSource $datasource)
+    public function addDataSource(HTML_QuickForm2_DataSource $datasource) : self
     {
         $this->datasources[] = $datasource;
         $this->updateValue();
+        return $this;
     }
 
    /**
@@ -166,9 +262,9 @@ class HTML_QuickForm2 extends HTML_QuickForm2_Container
    /**
     * Returns the list of data sources attached to the form
     *
-    * @return   array
+    * @return HTML_QuickForm2_DataSource[]
     */
-    public function getDataSources()
+    public function getDataSources() : array
     {
         return $this->datasources;
     }
@@ -178,7 +274,7 @@ class HTML_QuickForm2 extends HTML_QuickForm2_Container
         return 'form';
     }
 
-    public function setValue($value)
+    public function setValue($value) : self
     {
         throw new HTML_QuickForm2_Exception('Not implemented');
     }
@@ -259,5 +355,23 @@ class HTML_QuickForm2 extends HTML_QuickForm2_Container
     public function getEventHandler()
     {
         return $this->eventHandler;
+    }
+
+    public function getLogIdentifier() : string
+    {
+        $label = 'Form'.$this->instanceID;
+
+        $id = $this->getId();
+        if(!empty($id))
+        {
+            $label .= ' [ID '.$id.']';
+        }
+
+        return $label;
+    }
+
+    public function isNameNullable() : bool
+    {
+        return false;
     }
 }

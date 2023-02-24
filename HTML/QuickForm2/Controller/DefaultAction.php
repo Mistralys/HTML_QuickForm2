@@ -21,6 +21,7 @@
 
 /** Class for <input type="image" /> elements */
 // pear-package-only require_once 'HTML/QuickForm2/Element/InputImage.php';
+use HTML\QuickForm2\AbstractHTMLElement\WatchedAttributes;
 
 /**
  * A hidden button used to submit the form when the user presses Enter
@@ -44,22 +45,16 @@
 class HTML_QuickForm2_Controller_DefaultAction
     extends HTML_QuickForm2_Element_InputImage
 {
-    protected $attributes = array('type' => 'image', 'id' => 'qf:default-action');
+    protected array $attributes = array(
+        'type' => 'image',
+        'id' => 'qf:default-action'
+    );
 
-   /**
-    * Disallow changing the 'id' attribute
-    *
-    * @param string $name  Attribute name
-    * @param string $value Attribute value, null if attribute is being removed
-    */
-    protected function onAttributeChange($name, $value = null)
+    protected function initWatchedAttributes(WatchedAttributes $attributes) : void
     {
-        if ('id' == $name) {
-            throw new HTML_QuickForm2_InvalidArgumentException(
-                "Attribute 'id' is read-only"
-            );
-        }
-        parent::onAttributeChange($name, $value);
+        parent::initWatchedAttributes($attributes);
+
+        $attributes->setReadonly('id');
     }
 
    /**
@@ -81,4 +76,4 @@ class HTML_QuickForm2_Controller_DefaultAction
         return $renderer;
     }
 }
-?>
+

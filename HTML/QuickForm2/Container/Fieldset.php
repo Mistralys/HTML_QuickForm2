@@ -19,52 +19,48 @@
  * @link      https://pear.php.net/package/HTML_QuickForm2
  */
 
-// pear-package-only /**
-// pear-package-only  * Base class for fieldsets
-// pear-package-only  */
-// pear-package-only require_once 'HTML/QuickForm2/Container.php';
+declare(strict_types=1);
 
 /**
- * Concrete implementation of a container for fieldsets
+ * Concrete implementation of a container for field sets.
  *
  * @category HTML
- * @package  HTML_QuickForm2
- * @author   Alexey Borzov <avb@php.net>
- * @author   Bertrand Mansion <golgote@mamasam.com>
+ * @package HTML_QuickForm2
+ * @subpackage Elements
+ * @author Alexey Borzov <avb@php.net>
+ * @author Bertrand Mansion <golgote@mamasam.com>
+ * @author Sebastian Mordziol <s.mordziol@mistralys.eu>
  * @license  https://opensource.org/licenses/BSD-3-Clause BSD 3-Clause License
- * @version  Release: @package_version@
- * @link     https://pear.php.net/package/HTML_QuickForm2
  */
-class HTML_QuickForm2_Container_Fieldset extends HTML_QuickForm2_Container
+class HTML_QuickForm2_Container_Fieldset extends HTML_QuickForm2_Container_Group
 {
-   /**
-    * Fieldsets don't have a 'name' attribute, so we only handle 'id'
-    * @var array
-    */
-    protected $watchedAttributes = array('id');
-
     public function getType()
     {
         return 'fieldset';
     }
 
+    public function prependsName() : bool
+    {
+        return false;
+    }
 
-    public function getName()
+    public function getName() : ?string
     {
         return null;
     }
 
-
-    public function setName($name)
+    public function setName(?string $name) : self
     {
-        // Fieldsets do not have a name attribute
         return $this;
     }
 
-
-    public function setValue($value)
+    protected function handle_nameAttributeChanged(?string $value) : void
     {
-        throw new HTML_QuickForm2_Exception('Not implemented');
+        // nothing to do here
+    }
+
+    public function isNameNullable() : bool
+    {
+        return true;
     }
 }
-?>

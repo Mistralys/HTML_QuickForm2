@@ -55,68 +55,44 @@
  */
 class HTML_QuickForm2_EventHandler
 {
+    public const ERROR_EVENT_CLASS_NOT_FOUND = 103201;
+
    /**
-    * @var HTML_QuickForm2
+    * @var HTML_QuickForm2_Node
     */
-    protected $form;
+    protected HTML_QuickForm2_Node $node;
     
    /**
     * Container for all added event handling callbacks.
-    * @var array
+    * @var array<string,array<int,array{id:int,callback:callable,params:array<int,mixed>}>>
     */
-    protected $handlers = array();
-    
-   /**
-    * Known event names that can be used.
-    * 
-    * @var string[]
-    */
-    protected $eventNames = array(
-        'NodeAdded'
-    );
+    protected array $handlers = array();
     
    /**
     * Counter for the event handler IDs.
     * @var integer
     */
-    protected static $idCounter = 0;
+    protected static int $idCounter = 0;
     
-    public function __construct(HTML_QuickForm2 $form)
+    public function __construct(HTML_QuickForm2_Node $node)
     {
-        $this->form = $form;
+        $this->node = $node;
     }
-    
-   /**
-    * Registers a callback for the NodeAdded event.
-    * 
-    * The callback gets two parameters, as shown in 
-    * the following example:
-    * 
-    * <pre>
-    * function callback_nodeAdded(HTML_QuickForm2_Event_NodeAdded $event, $params=array() { }
-    * </pre>
-    * 
-    * @param callable $callback
-    * @param array $params
-    * @return int
-    */
-    public function onNodeAdded(callable $callback, $params=array())
-    {
-        return $this->addHandler('NodeAdded', $callback, $params);
-    }
-    
-   /**
-    * Adds an event handler for the specified event name,
-    * and returns the handler ID. The ID can be used to
-    * reference the handler again later, for example to
-    * remove it again.
-    * 
-    * @param string $eventName
-    * @param callable $callback
-    * @param array $params Optional parameters that are passed on to the callback when the event is triggered
-    * @return int
-    */
-    protected function addHandler($eventName, callable $callback, array $params=array())
+
+    /**
+     * Adds an event handler for the specified event name,
+     * and returns the handler ID. The ID can be used to
+     * reference the handler again later, for example to
+     * remove it again.
+     *
+     * @param string $eventName
+     * @param callable $callback
+     * @param array $params Optional parameters that are passed on to the callback when the event is triggered
+     * @return int
+     *
+     * @throws HTML_QuickForm2_InvalidEventException
+     */
+    public function addHandler(string $eventName, callable $callback, array $params=array()) : int
     {
         // to make the class available as soon as the event has been registered
         $this->includeEventClass($eventName);
@@ -128,6 +104,7 @@ class HTML_QuickForm2_EventHandler
         $id = $this->nextHandlerID();
         
         $this->handlers[$eventName][$id] = array(
+            'id' => $id,
             'callback' => $callback,
             'params' => $params
         );
@@ -135,19 +112,20 @@ class HTML_QuickForm2_EventHandler
         return $id;
     }
     
-    protected function nextHandlerID()
+    protected function nextHandlerID() : int
     {
         self::$idCounter++;
         return self::$idCounter;
     }
-    
-   /**
-    * Removes a handler by its ID. Has no effect
-    * if no corresponding handler is found.
-    * 
-    * @param int $handlerID
-    */
-    public function removeHandler($handlerID)
+
+    /**
+     * Removes a handler by its ID. Has no effect
+     * if no corresponding handler is found.
+     *
+     * @param int $handlerID
+     * @return $this
+     */
+    public function removeHandler(int $handlerID) : self
     {
         foreach($this->handlers as $name => $handlers) {
             if(isset($handlers[$handlerID])) {
@@ -155,88 +133,70 @@ class HTML_QuickForm2_EventHandler
                 break;
             }
         }
+
+        return $this;
     }
-    
-   /**
-    * Checks whether the specified event name is a valid, existing event name.
-    * @param string $eventName
-    * @return boolean
-    */
-    public function eventNameExists($eventName)
-    {
-        return in_array($eventName, $this->eventNames);
-    }
-    
-   /**
-    * Called whenever a new node is added to the form.
-    * @param HTML_QuickForm2_Node $node
-    * @return HTML_QuickForm2_Event_NodeAdded
-    */
-    public function triggerNodeAdded(HTML_QuickForm2_Node $node)
-    {
-        return $this->triggerEvent(
-            'NodeAdded', 
-            array(
-                'node' => $node
-            )
-        );
-    }
-    
-   /**
-    * Triggers the specified event. Returns an event instance
-    * regardless of whether there were any handlers registered
-    * for it.
-    *  
-    * @param string $eventName
-    * @param array $args
-    * @return HTML_QuickForm2_Event
-    */
-    protected function triggerEvent($eventName, array $args=array())
+
+    /**
+     * Triggers the specified event. Returns an event instance
+     * regardless of whether there were any handlers registered
+     * for it.
+     *
+     * @param string $eventName
+     * @param array<int,mixed> $args
+     * @return HTML_QuickForm2_Event
+     *
+     * @throws HTML_QuickForm2_InvalidEventException
+     */
+    public function triggerEvent(string $eventName, array $args=array()) : HTML_QuickForm2_Event
     {
         $class = $this->includeEventClass($eventName);
         
-        $event = new $class($args);
-        
-        if(isset($this->handlers[$eventName])) {
-            foreach($this->handlers[$eventName] as $handler) {
-                call_user_func($handler['callback'], $event, $handler['params']);
+        $event = new $class($this, $args);
+
+        if(isset($this->handlers[$eventName]))
+        {
+            foreach($this->handlers[$eventName] as $handler)
+            {
+                $params = array();
+                if(is_array($handler['params']))
+                {
+                    $params = $handler['params'];
+                }
+
+                array_unshift($params, $handler['id']);
+                array_unshift($params, $event);
+
+                call_user_func_array($handler['callback'], $params);
             }
         }
         
         return $event;
     }
-    
-   /**
-    * Includes the event-specific class.
-    * 
-    * @param string $eventName
-    * @return string The name of the event class
-    */
-    protected function includeEventClass($eventName)
+
+    /**
+     * Includes the event-specific class.
+     *
+     * @param string $eventName
+     * @return string The name of the event class
+     *
+     * @throws HTML_QuickForm2_InvalidEventException
+     */
+    protected function includeEventClass(string $eventName) : string
     {
-        $this->requireValidEvent($eventName);
-        
-        $className = 'HTML_QuickForm2_Event_'.$eventName;
-        
-        return $className;
-    }
-    
-   /**
-    * Throws an exception if the event name is not known.
-    * @param string $eventName
-    * @throws HTML_QuickForm2_InvalidEventException
-    */
-    protected function requireValidEvent($eventName)
-    {
-        if($this->eventNameExists($eventName)) {
-            return; 
+        $className = HTML_QuickForm2_Event::class.'_'.$eventName;
+
+        if(class_exists($className))
+        {
+            return $className;
         }
-        
+
         throw new HTML_QuickForm2_InvalidEventException(
             sprintf(
-                'Invalid event name. Known events are [%s].',
-                implode(', ', $this->eventNames)
-            )
-        );    
+                'Event class [%s] could not be found.',
+                $className
+            ),
+            self::ERROR_EVENT_CLASS_NOT_FOUND
+        );
     }
 }

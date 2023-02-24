@@ -23,6 +23,8 @@
 // pear-package-only  * Base class for <input> elements
 // pear-package-only  */
 // pear-package-only require_once 'HTML/QuickForm2/Element/Input.php';
+use HTML\QuickForm2\AbstractHTMLElement\GlobalOptions;
+use HTML\QuickForm2\AbstractHTMLElement\WatchedAttributes;
 
 /**
  * Base class for <input> elements having 'checked' attribute (checkboxes and radios)
@@ -58,27 +60,32 @@ class HTML_QuickForm2_Element_InputCheckable extends HTML_QuickForm2_Element_Inp
     */
     protected $data = array('content' => '');
 
-    public function __construct($name = null, $attributes = null, array $data = array())
+    protected function initWatchedAttributes(WatchedAttributes $attributes) : void
     {
-        parent::__construct($name, $attributes, $data);
-        // "checked" attribute should be updated on changes to "value" attribute
-        // see bug #15708
-        $this->watchedAttributes[] = 'value';
+        parent::initWatchedAttributes($attributes);
+
+        $attributes->setWatched('value', Closure::fromCallable(array($this, 'onValueChanged')));
     }
 
-    protected function onAttributeChange($name, $value = null)
+    /**
+     * The "checked" attribute should be updated on changes to "value" attribute
+     *  see bug #15708
+     *
+     * @param string|null $value
+     * @return void
+     */
+    protected function onValueChanged(?string $value) : void
     {
-        if ('value' != $name) {
-            return parent::onAttributeChange($name, $value);
-        }
-        if (null === $value) {
+        if ($value === null)
+        {
             unset($this->attributes['value'], $this->attributes['checked']);
-        } else {
-            $this->attributes['value'] = $value;
-            $this->updateValue();
+            return;
         }
-    }
 
+        $this->attributes['value'] = $value;
+
+        $this->updateValue();
+    }
 
    /**
     * Sets the label to be rendered glued to the element
@@ -106,23 +113,59 @@ class HTML_QuickForm2_Element_InputCheckable extends HTML_QuickForm2_Element_Inp
         return $this->data['content'];
     }
 
-
-    public function setValue($value)
+    public function setValue($value) : self
     {
-        if ((string)$value == $this->getAttribute('value')) {
-            return $this->setAttribute('checked');
-        } else {
-            return $this->removeAttribute('checked');
+        if ((string)$value === $this->getAttribute('value'))
+        {
+            return $this->setChecked(true);
         }
+
+        return $this->setChecked(false);
     }
 
-    public function getRawValue()
+    /**
+     * Using `setValue()` does not modify the checkbox' `value`
+     * attribute, but sets its checked status if the value being
+     * set matches the `value` attribute.
+     *
+     * This method updates the checkbox' `value` attribute.
+     *
+     * @param string $value
+     * @return $this
+     */
+    public function setValueAttribute(string $value) : self
     {
-        if (!empty($this->attributes['checked']) && empty($this->attributes['disabled'])) {
-            return $this->getAttribute('value');
-        } else {
-            return null;
+        return $this->setAttribute('value', $value);
+    }
+
+    public function getRawValue() : string
+    {
+        if ($this->isChecked() && !$this->isDisabled())
+        {
+            return (string)$this->getAttribute('value');
         }
+
+        return '';
+    }
+
+    public function isDisabled() : bool
+    {
+        return $this->hasAttribute('disabled');
+    }
+
+    public function isChecked() : bool
+    {
+        return $this->hasAttribute('checked');
+    }
+
+    public function setChecked(bool $checked) : self
+    {
+        if($checked === true)
+        {
+            return $this->setAttribute('checked');
+        }
+
+        return $this->removeAttribute('checked');
     }
 
     public function __toString()
@@ -133,7 +176,7 @@ class HTML_QuickForm2_Element_InputCheckable extends HTML_QuickForm2_Element_Inp
             $label = $this->data['content'];
         } else {
             $label = '<label for="' . htmlspecialchars(
-                $this->getId(), ENT_QUOTES, self::getOption('charset')
+                $this->getId(), ENT_QUOTES, GlobalOptions::getCharset()
             ) . '">' . $this->data['content'] . '</label>';
         }
         return parent::__toString() . $label;

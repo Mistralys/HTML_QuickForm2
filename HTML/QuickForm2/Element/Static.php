@@ -23,6 +23,8 @@
 // pear-package-only  * Base class for simple HTML_QuickForm2 elements (not Containers)
 // pear-package-only  */
 // pear-package-only require_once 'HTML/QuickForm2/Element.php';
+use HTML\QuickForm2\AbstractHTMLElement\GlobalOptions;
+use HTML\QuickForm2\AbstractHTMLElement\WatchedAttributes;
 
 /**
  * Class for static elements that only contain text or markup
@@ -82,43 +84,22 @@ class HTML_QuickForm2_Element_Static extends HTML_QuickForm2_Element
         parent::__construct($name, $attributes, $data);
     }
 
-   /**
-    * Intercepts setting 'name' and 'id' attributes
-    *
-    * Overrides parent method to allow removal of 'name' attribute on Static
-    * elements
-    *
-    * @param string $name  Attribute name
-    * @param string $value Attribute value, null if attribute is being removed
-    *
-    * @throws   HTML_QuickForm2_InvalidArgumentException    if trying to
-    *                                   remove a required attribute
-    */
-    protected function onAttributeChange($name, $value = null)
+    /**
+     * Allow removal of 'name' attribute on Static elements
+     *
+     * @param string|null $value Attribute value, null if attribute is being removed
+     */
+    protected function handle_nameAttributeChanged(?string $value) : void
     {
-        if ('name' == $name && null === $value) {
+        if ($value === null)
+        {
             unset($this->attributes['name']);
-        } else {
-            parent::onAttributeChange($name, $value);
         }
     }
 
-   /**
-    * Sets the element's name
-    *
-    * Passing null here will remove the name attribute
-    *
-    * @param string|null $name
-    *
-    * @return   HTML_QuickForm2_Element_Static
-    */
-    public function setName($name)
+    public function isNameNullable() : bool
     {
-        if (null !== $name) {
-            return parent::setName($name);
-        } else {
-            return $this->removeAttribute('name');
-        }
+        return true;
     }
 
     public function getType()
@@ -169,7 +150,7 @@ class HTML_QuickForm2_Element_Static extends HTML_QuickForm2_Element
     *
     * @return $this
     */
-    public function setValue($value)
+    public function setValue($value) : self
     {
         $this->setContent($value);
         return $this;
@@ -190,7 +171,7 @@ class HTML_QuickForm2_Element_Static extends HTML_QuickForm2_Element
         $prefix = $this->getIndent();
         if ($comment = $this->getComment()) {
             $prefix .= '<!-- ' . $comment . ' -->'
-                       . HTML_Common2::getOption('linebreak') . $this->getIndent();
+                       . GlobalOptions::getLineBreak() . $this->getIndent();
         }
 
         if (!$this->tagName) {
@@ -219,19 +200,31 @@ class HTML_QuickForm2_Element_Static extends HTML_QuickForm2_Element
     *
     * Static elements content can be updated with default form values.
     */
-    protected function updateValue()
+    protected function updateValue() : self
     {
         $name = $this->getName();
-        /* @var $ds HTML_QuickForm2_DataSource_NullAware */
-        foreach ($this->getDataSources() as $ds) {
-            if (!$ds instanceof HTML_QuickForm2_DataSource_Submit
-                && (null !== ($value = $ds->getValue($name))
-                    || $ds instanceof HTML_QuickForm2_DataSource_NullAware && $ds->hasValue($name))
+
+        foreach ($this->getDataSources() as $ds)
+        {
+            $value = $ds->getValue($name);
+
+            if (
+                (
+                    !$ds instanceof HTML_QuickForm2_DataSource_Submit
+                    && $value !== null
+                )
+                ||
+                (
+                    $ds instanceof HTML_QuickForm2_DataSource_NullAware
+                    && $ds->hasValue($name)
+                )
             ) {
                 $this->setContent($value);
-                return;
+                return $this;
             }
         }
+
+        return $this;
     }
 
    /**

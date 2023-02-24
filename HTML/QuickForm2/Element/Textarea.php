@@ -23,6 +23,7 @@
 // pear-package-only  * Base class for simple HTML_QuickForm2 elements
 // pear-package-only  */
 // pear-package-only require_once 'HTML/QuickForm2/Element.php';
+use HTML\QuickForm2\AbstractHTMLElement\GlobalOptions;
 
 /**
  * Class for <textarea> elements
@@ -50,7 +51,7 @@ class HTML_QuickForm2_Element_Textarea extends HTML_QuickForm2_Element
         return 'textarea';
     }
 
-    public function setValue($value)
+    public function setValue($value) : self
     {
         $this->value = $value;
         return $this;
@@ -65,23 +66,26 @@ class HTML_QuickForm2_Element_Textarea extends HTML_QuickForm2_Element
     {
         if ($this->frozen) {
             return $this->getFrozenHtml();
-        } else {
-            return $this->getIndent() . '<textarea' . $this->getAttributes(true) .
-                   '>' . preg_replace("/(\r\n|\n|\r)/", '&#010;', htmlspecialchars(
-                        $this->value, ENT_QUOTES, self::getOption('charset')
-                   )) . '</textarea>';
         }
+
+        return $this->getIndent() .
+            '<textarea' . $this->getAttributes(true) .'>' .
+                $this->valueToHTML($this->value) .
+            '</textarea>';
     }
 
     public function getFrozenHtml()
     {
-        $value = htmlspecialchars($this->value, ENT_QUOTES, self::getOption('charset'));
-        if ('off' == $this->getAttribute('wrap')) {
+        $value = $this->valueToHTML($this->value);
+
+        if ('off' === $this->getAttribute('wrap'))
+        {
             $html = $this->getIndent() . '<pre>' . $value .
-                    '</pre>' . self::getOption('linebreak');
+                    '</pre>' . GlobalOptions::getLineBreak();
         } else {
-            $html = nl2br($value) . self::getOption('linebreak');
+            $html = nl2br($value) . GlobalOptions::getLineBreak();
         }
+
         return $html . $this->getPersistentContent();
     }
 

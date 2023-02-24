@@ -23,6 +23,7 @@
 // pear-package-only  * Class for static elements that only contain text or markup
 // pear-package-only  */
 // pear-package-only require_once 'HTML/QuickForm2/Element/Static.php';
+use HTML\QuickForm2\AbstractHTMLElement\GlobalOptions;
 
 /**
  * Class for adding inline javascript to the form
@@ -55,9 +56,9 @@ class HTML_QuickForm2_Element_Script extends HTML_QuickForm2_Element_Static
     */
     public function __toString()
     {
-        $cr         = HTML_Common2::getOption('linebreak');
+        $cr         = GlobalOptions::getLineBreak();
         $attributes = ' type="text/javascript"';
-        if (null !== ($nonce = HTML_Common2::getOption('nonce'))) {
+        if (null !== ($nonce = GlobalOptions::getNonce())) {
             $attributes .= ' nonce="' . $nonce . '"';
         }
         return "<script{$attributes}>{$cr}//<![CDATA[{$cr}"
@@ -79,4 +80,3 @@ class HTML_QuickForm2_Element_Script extends HTML_QuickForm2_Element_Static
         return $renderer;
     }
 }
-?>

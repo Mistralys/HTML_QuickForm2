@@ -88,6 +88,8 @@ class HTML_QuickForm2_Renderer_Proxy extends HTML_QuickForm2_Renderer
     */
     protected function __construct(HTML_QuickForm2_Renderer $renderer, array &$pluginClasses)
     {
+        parent::__construct();
+
         foreach ($renderer->exportMethods() as $method) {
             $this->_rendererMethods[strtolower($method)] = true;
         }
@@ -191,9 +193,8 @@ class HTML_QuickForm2_Renderer_Proxy extends HTML_QuickForm2_Renderer
         }
     }
 
-   /**#@+
-    * Proxies for methods defined in {@link HTML_QuickForm2_Renderer}
-    */
+    // region: Proxies for renderer methods
+
     public function setOption($nameOrOptions, $value = null)
     {
         $this->_renderer->setOption($nameOrOptions, $value);
@@ -242,6 +243,16 @@ class HTML_QuickForm2_Renderer_Proxy extends HTML_QuickForm2_Renderer
         $this->_renderer->finishForm($form);
     }
 
+    public function setTemplateForId(string $id, $template) : self
+    {
+        if($this->_renderer instanceof HTML_QuickForm2_Renderer_Default)
+        {
+            $this->_renderer->setTemplateForId($id, $template);
+        }
+
+        return $this;
+    }
+
     public function startContainer(HTML_QuickForm2_Node $container)
     {
         $this->_renderer->startContainer($container);
@@ -261,17 +272,16 @@ class HTML_QuickForm2_Renderer_Proxy extends HTML_QuickForm2_Renderer
     {
         $this->_renderer->finishGroup($group);
     }
-   /**#@-*/
 
     public function __toString()
     {
-        if (method_exists($this->_renderer, '__toString')) {
-            return $this->_renderer->__toString();
+        if (method_exists($this->_renderer, '__toString'))
+        {
+            return (string)$this->_renderer;
         }
-        trigger_error(
-            "Fatal error: Object of class " . get_class($this->_renderer)
-            . " could not be converted to string", E_USER_ERROR
-        );
+
+        return '';
     }
+
+    // endregion
 }
-?>

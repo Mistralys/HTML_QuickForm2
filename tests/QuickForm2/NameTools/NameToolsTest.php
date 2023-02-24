@@ -6,6 +6,7 @@ namespace tests\QuickForm2\NameTools;
 
 use assets\QuickFormTestCase;
 use HTML\QuickForm2\NameTools;
+use HTML_QuickForm2_Container_Group;
 
 final class NameToolsTest extends QuickFormTestCase
 {
@@ -52,19 +53,22 @@ final class NameToolsTest extends QuickFormTestCase
                 'name' => 'foo',
                 'containerName' => null,
                 'reduced' => 'foo',
-                'levels' => array()
+                'levels' => array(),
+                'namePath' => array('foo')
             ),
             array(
                 'name' => 'foo[bar]',
                 'containerName' => 'foo',
                 'reduced' => 'bar',
-                'levels' => array('bar')
+                'levels' => array('bar'),
+                'namePath' => array('foo', 'bar')
             ),
             array(
                 'name' => 'foo[bar][sub]',
                 'containerName' => 'foo',
                 'reduced' => 'bar[sub]',
-                'levels' => array('bar', 'sub')
+                'levels' => array('bar', 'sub'),
+                'namePath' => array('foo', 'bar', 'sub')
             )
         );
 
@@ -75,6 +79,58 @@ final class NameToolsTest extends QuickFormTestCase
             $this->assertSame($test['containerName'], $parsed->getContainerName());
             $this->assertSame($test['levels'], $parsed->getSubLevels());
             $this->assertSame($test['reduced'], $parsed->reduce()->getName());
+            $this->assertSame($test['namePath'], $parsed->getNamePath());
+        }
+    }
+
+    public function test_generateName() : void
+    {
+        $tests = array(
+            array(
+                'name' => null,
+                'container' => null,
+                'expected' => null
+            ),
+            array(
+                'name' => 'foo',
+                'container' => null,
+                'expected' => 'foo'
+            ),
+            array(
+                'name' => 'foo[bar]',
+                'container' => null,
+                'expected' => 'foo[bar]'
+            ),
+            array(
+                'name' => 'foo',
+                'container' => new HTML_QuickForm2_Container_Group(),
+                'expected' => 'foo'
+            ),
+            array(
+                'name' => 'foo',
+                'container' => new HTML_QuickForm2_Container_Group('prefix'),
+                'expected' => 'prefix[foo]'
+            ),
+            array(
+                'name' => 'foo',
+                'container' => new HTML_QuickForm2_Container_Group('prefix[sub_prefix]'),
+                'expected' => 'prefix[sub_prefix][foo]'
+            )
+        );
+
+        foreach($tests as $test)
+        {
+            $result = NameTools::generateName(
+                $test['name'],
+                $test['container']
+            );
+
+            $this->assertSame(
+                $test['expected'],
+                $result,
+                'Test setup:'.PHP_EOL.
+                print_r($test, true)
+            );
         }
     }
 }

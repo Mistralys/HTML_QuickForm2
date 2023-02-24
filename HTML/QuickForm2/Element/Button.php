@@ -19,10 +19,8 @@
  * @link      https://pear.php.net/package/HTML_QuickForm2
  */
 
-// pear-package-only /**
-// pear-package-only  * Base class for simple HTML_QuickForm2 elements
-// pear-package-only  */
-// pear-package-only require_once 'HTML/QuickForm2/Element.php';
+use HTML\QuickForm2\Interfaces\Element\DisableAbleInterface;
+use HTML\QuickForm2\Traits\Element\DisableAbleTrait;
 
 /**
  * Class for <button> elements
@@ -38,8 +36,12 @@
  * @version  Release: @package_version@
  * @link     https://pear.php.net/package/HTML_QuickForm2
  */
-class HTML_QuickForm2_Element_Button extends HTML_QuickForm2_Element
+class HTML_QuickForm2_Element_Button
+    extends HTML_QuickForm2_Element
+    implements DisableAbleInterface
 {
+    use DisableAbleTrait;
+
    /**
     * Contains options and data used for the element creation
     * - content: Content to be displayed between <button></button> tags
@@ -52,6 +54,16 @@ class HTML_QuickForm2_Element_Button extends HTML_QuickForm2_Element
     * @var  string|null
     */
     protected $submitValue = null;
+
+    protected function initNode()
+    {
+        parent::initNode();
+
+        if($this->isSubmit() && $this->isAttributeEmpty('value'))
+        {
+            $this->setAttribute('value', '1');
+        }
+    }
 
     public function getType()
     {
@@ -78,7 +90,7 @@ class HTML_QuickForm2_Element_Button extends HTML_QuickForm2_Element
     *
     * @return $this
     */
-    function setContent($content)
+    public function setContent(string $content) : self
     {
         $this->data['content'] = $content;
         return $this;
@@ -87,12 +99,11 @@ class HTML_QuickForm2_Element_Button extends HTML_QuickForm2_Element
    /**
     * Sets the button's type attribute.
     * @param string $type
-    * @return HTML_QuickForm2_Element_Button
+    * @return $this
     */
-    public function setType($type)
+    public function setType(string $type) : self
     {
-        $this->setAttribute('type', $type);
-        return $this;
+        return $this->setAttribute('type', $type);
     }
     
    /**
@@ -112,9 +123,29 @@ class HTML_QuickForm2_Element_Button extends HTML_QuickForm2_Element
     *
     * @return $this
     */
-    public function setValue($value)
+    public function setValue($value) : self
     {
         return $this;
+    }
+
+    /**
+     * Turns the button into a submit button, with the
+     * specified value to transmit if the button is
+     * clicked.
+     *
+     * @param string $value
+     * @return $this
+     */
+    public function makeSubmit(string $value='1') : self
+    {
+        $this->setType('submit');
+        $this->setAttribute('value', $value);
+        return $this;
+    }
+
+    public function isSubmit() : bool
+    {
+        return $this->getAttribute('type') === 'submit';
     }
 
    /**
@@ -129,15 +160,19 @@ class HTML_QuickForm2_Element_Button extends HTML_QuickForm2_Element
     *
     * @return    string|null
     */
-    public function getRawValue()
+    public function getRawValue() : ?string
     {
-        if ((empty($this->attributes['type']) || 'submit' == $this->attributes['type'])
-            && !$this->getAttribute('disabled')
-        ) {
-            return $this->submitValue;
-        } else {
+        if($this->isDisabled())
+        {
             return null;
         }
+
+        if ($this->isAttributeEmpty('type') || $this->isSubmit())
+        {
+            return $this->submitValue;
+        }
+
+        return null;
     }
 
     public function __toString()
@@ -146,16 +181,23 @@ class HTML_QuickForm2_Element_Button extends HTML_QuickForm2_Element
                '>' . $this->data['content'] . '</button>';
     }
 
-    protected function updateValue()
+    protected function updateValue() : self
     {
-        foreach ($this->getDataSources() as $ds) {
-            if ($ds instanceof HTML_QuickForm2_DataSource_Submit
-                && null !== ($value = $ds->getValue($this->getName()))
-            ) {
+        $name = $this->getName();
+
+        foreach ($this->getDataSources() as $ds)
+        {
+            $value = $ds->getValue($name);
+
+            if ($value !== null && $ds instanceof HTML_QuickForm2_DataSource_Submit)
+            {
                 $this->submitValue = $value;
-                return;
+                return $this;
             }
         }
+
         $this->submitValue = null;
+
+        return $this;
     }
 }

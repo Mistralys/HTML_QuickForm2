@@ -23,6 +23,8 @@
 // pear-package-only  * Implements a recursive iterator for options arrays
 // pear-package-only  */
 // pear-package-only require_once 'HTML/QuickForm2/Element/Select/OptionIterator.php';
+use HTML\QuickForm2\AbstractHTMLElement;
+use HTML\QuickForm2\AbstractHTMLElement\GlobalOptions;
 
 /**
  * Collection of <option>s and <optgroup>s
@@ -39,7 +41,7 @@
  * @link     https://pear.php.net/package/HTML_QuickForm2
  * @internal
  */
-class HTML_QuickForm2_Element_Select_OptionContainer extends HTML_Common2
+class HTML_QuickForm2_Element_Select_OptionContainer extends AbstractHTMLElement
     implements IteratorAggregate, Countable
 {
    /**
@@ -149,7 +151,7 @@ class HTML_QuickForm2_Element_Select_OptionContainer extends HTML_Common2
     *
     * @return   array
     */
-    public function getOptions()
+    public function getOptions() : array
     {
         return $this->options;
     }
@@ -157,8 +159,8 @@ class HTML_QuickForm2_Element_Select_OptionContainer extends HTML_Common2
     public function __toString()
     {
         $indentLvl = $this->getIndentLevel();
-        $indent    = $this->getIndent() . self::getOption('indent');
-        $linebreak = self::getOption('linebreak');
+        $indent    = $this->getIndent() . GlobalOptions::getIndentChar();
+        $linebreak = GlobalOptions::getLineBreak();
         $html      = '';
         $strValues = array_map('strval', $this->values);
         foreach ($this->options as $option) {
@@ -235,5 +237,10 @@ class HTML_QuickForm2_Element_Select_OptionContainer extends HTML_Common2
         
         return $count;
     }
+
+    public function getLogIdentifier() : string
+    {
+        return 'SelectOptionContainer';
+    }
 }
-?>
+

@@ -104,13 +104,11 @@ class HTML_QuickForm2_Controller_SessionContainer
     *
     * @param string $pageId Page ID
     *
-    * @return   bool
+    * @return bool|NULL
     */
-    public function getValidationStatus($pageId)
+    public function getValidationStatus(string $pageId) : ?bool
     {
-        return array_key_exists($pageId, $this->data['valid'])
-               ? $this->data['valid'][$pageId]: null;
-
+        return $this->data['valid'][$pageId] ?? null;
     }
 
    /**

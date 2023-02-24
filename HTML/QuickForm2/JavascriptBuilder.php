@@ -23,6 +23,7 @@
 // pear-package-only  * Exception classes for HTML_QuickForm2
 // pear-package-only  */
 // pear-package-only require_once 'HTML/QuickForm2/Exception.php';
+use HTML\QuickForm2\AbstractHTMLElement\GlobalOptions;
 
 /**
  * Javascript aggregator and builder class
@@ -290,9 +291,9 @@ class HTML_QuickForm2_JavascriptBuilder
     protected function wrapScript($js)
     {
         if ('' != $js) {
-            $cr         = HTML_Common2::getOption('linebreak');
+            $cr         = GlobalOptions::getLineBreak();
             $attributes = ' type="text/javascript"';
-            if (null !== ($nonce = HTML_Common2::getOption('nonce'))) {
+            if (null !== ($nonce = GlobalOptions::getNonce())) {
                 $attributes .= ' nonce="' . $nonce . '"';
             }
             $js = "<script{$attributes}>{$cr}//<![CDATA[{$cr}"

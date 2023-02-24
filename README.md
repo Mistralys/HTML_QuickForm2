@@ -2,8 +2,9 @@
 
 # HTML_QuickForm2 - Mistralys fork
 
-This fork focuses on quality of life improvements, as well as performance enhancements when working 
-with large forms, or many parallel forms. 
+This fork focuses on quality of life improvements, as well as performance enhancements 
+when working with large forms or many parallel forms. It also aims to make the package
+evolve to leverage the new PHP language features.
 
 ## Composer compatible
 
@@ -11,26 +12,28 @@ Install via package name `mistralys/html_quickform2`.
 
 See https://packagist.org/packages/mistralys/html_quickform2
 
-## Additions
+## Additions and changes
 
-  * Elements: set/getRuntimeProperty() method to store data at runtime
-  * Default array datasource: setValues() method 
-  * Textarea element: setRows() / setColumns() methods
-  * Elements: makeOptional() method to remove any required rules
-  * Elements: hasErrors() method to check if an element has errors after validation
-  * Elements: getRules() method to retrieve all rules added to the element
-  * Elements: hasRules() method to check if an element has any rules 
-  * Rules: The callback rule now has a method getCallback() to retrieve the configured callback
-  * Text-based elements: addFilterTrim() method 
+  * Elements: `setRuntimeProperty()` and `getRuntimeProperty()` methods to store data at runtime
+  * Default array datasource: `setValues()` method 
+  * Textarea element: `setRows()` and `setColumns()` methods
+  * New `GlobalOptions` class to handle options like language, charset, nonce, etc.
+  * Replaced `HTML_Common2` with a bundled class upgraded to strict typing.
+  * Elements: `makeOptional()` method to remove any required rules
+  * Elements: `hasErrors()` method to check if an element has errors after validation
+  * Elements: `getRules()` method to retrieve all rules added to the element
+  * Elements: `hasRules()` method to check if an element has any rules 
+  * Rules: The callback rule now has a method `getCallback()` to retrieve the configured callback
+  * Text-based elements: `addFilterTrim()` method 
   * Select element: prependOption() method to insert an element at the top
-  * Select optgroups: getLabel() method
-  * Select element and optgroups: countOptions() method with recursive capability
-  * Fully reworked the testsuites so they all run correctly
+  * Select element: Option groups: `getLabel()` method
+  * Select element: `countOptions()` method with recursive capability
+  * Fully reworked test suites for PHP 7.4 and PHPUnit 9
 
 ## Performance tweaks
 
-  * Container getElementById() method 
-  * Auto-generated element IDs
+  * Container `getElementById()` method is much faster. 
+  * Element IDs are now auto-generated when not explicitly specified.
 
 ## Requirements
 

@@ -8,7 +8,7 @@ namespace QuickForm2\ElementTests;
 
 use HTML\QuickForm2\AbstractHTMLElement\GlobalOptions;
 use HTML\QuickForm2\AbstractHTMLElement\WatchedAttributes;
-use HTML_QuickForm2_ElementImpl;
+use TestAssets\MockElement;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -21,7 +21,7 @@ final class IDTest extends TestCase
 
     public function testCanSetId()
     {
-        $obj = new HTML_QuickForm2_ElementImpl(null, array('id' => 'manual'));
+        $obj = new MockElement(null, array('id' => 'manual'));
         $this->assertEquals('manual', $obj->getId());
 
         $this->assertSame($obj, $obj->setId('another'));
@@ -33,7 +33,7 @@ final class IDTest extends TestCase
 
     public function testCanNotRemoveId() : void
     {
-        $obj = new HTML_QuickForm2_ElementImpl('somename', array(), array('id' => 'someid'));
+        $obj = new MockElement('somename', array(), array('id' => 'someid'));
 
         $this->expectExceptionCode(WatchedAttributes::ERROR_ATTRIBUTE_IS_READONLY);
 
@@ -59,13 +59,13 @@ final class IDTest extends TestCase
 
         foreach($names as $name)
         {
-            $el = new HTML_QuickForm2_ElementImpl($name);
+            $el = new MockElement($name);
             $this->assertNotEquals('', $el->getId(), 'Should have an auto-generated \'id\' attribute');
             $usedIds[] = $el->getId();
             $this->assertContains($el->getId(), $usedIds);
 
             // Duplicate name...
-            $el2 = new HTML_QuickForm2_ElementImpl($name);
+            $el2 = new MockElement($name);
             $this->assertNotContains($el2->getId(), $usedIds);
             $usedIds[] = $el2->getId();
         }
@@ -93,18 +93,18 @@ final class IDTest extends TestCase
 
         foreach ($usedIds as $id)
         {
-            new HTML_QuickForm2_ElementImpl($elName, array('id' => $id));
+            new MockElement($elName, array('id' => $id));
         }
 
         foreach ($names as $name)
         {
-            $el = new HTML_QuickForm2_ElementImpl($name);
+            $el = new MockElement($name);
             $this->assertNotContains($el->getId(), $usedIds);
 
             $usedIds[] = $el->getId();
 
             // Duplicate name...
-            $el2 = new HTML_QuickForm2_ElementImpl($name);
+            $el2 = new MockElement($name);
             $this->assertNotContains($el2->getId(), $usedIds);
 
             $usedIds[] = $el2->getId();
@@ -124,7 +124,7 @@ final class IDTest extends TestCase
      */
     public function testGeneratedIdsShouldNotStartWithNumbers() : void
     {
-        $el = new HTML_QuickForm2_ElementImpl('0');
+        $el = new MockElement('0');
 
         $this->assertDoesNotMatchRegularExpression('/^\d/', $el->getId());
     }

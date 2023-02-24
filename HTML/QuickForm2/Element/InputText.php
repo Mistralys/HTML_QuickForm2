@@ -39,15 +39,18 @@ class HTML_QuickForm2_Element_InputText extends HTML_QuickForm2_Element_Input
 {
     protected $persistent = true;
 
-    protected $attributes = array('type' => 'text');
-    
-   /**
-    * Adds a filter for the "trim" function.
-    * @return HTML_QuickForm2_Element_InputText
-    */
-    public function addFilterTrim()
+    protected array $attributes = array(
+        'type' => 'text'
+    );
+
+    /**
+     * Adds a filter for the "trim" function.
+     *
+     * @return $this
+     * @throws HTML_QuickForm2_InvalidArgumentException
+     */
+    public function addFilterTrim() : self
     {
         return $this->addFilter('trim');
     }
 }
-?>

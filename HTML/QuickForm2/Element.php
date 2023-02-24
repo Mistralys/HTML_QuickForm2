@@ -19,10 +19,7 @@
  * @link      https://pear.php.net/package/HTML_QuickForm2
  */
 
-// pear-package-only /**
-// pear-package-only  * Base class for all HTML_QuickForm2 elements
-// pear-package-only  */
-// pear-package-only require_once 'HTML/QuickForm2/Node.php';
+use HTML\QuickForm2\Element\ValueUpdater;
 
 /**
  * Abstract base class for simple QuickForm2 elements (not Containers)
@@ -32,19 +29,16 @@
  * @author   Alexey Borzov <avb@php.net>
  * @author   Bertrand Mansion <golgote@mamasam.com>
  * @license  https://opensource.org/licenses/BSD-3-Clause BSD 3-Clause License
- * @version  Release: @package_version@
  * @link     https://pear.php.net/package/HTML_QuickForm2
  */
 abstract class HTML_QuickForm2_Element extends HTML_QuickForm2_Node
 {
-    public function setName($name)
+    public function isNameNullable() : bool
     {
-        $this->attributes['name'] = (string)$name;
-        $this->updateValue();
-        return $this;
+        return false;
     }
 
-   /**
+    /**
     * Generates hidden form field containing the element's value
     *
     * This is used to pass the frozen element's value if 'persistent freeze'
@@ -62,25 +56,6 @@ abstract class HTML_QuickForm2_Element extends HTML_QuickForm2_Node
             'value' => $value,
             'id'    => $this->getId()
         )) . ' />';
-    }
-
-   /**
-    * Called when the element needs to update its value from form's data sources
-    *
-    * The default behaviour is to go through the complete list of the data
-    * sources until the non-null value is found.
-    */
-    protected function updateValue()
-    {
-        $name = $this->getName();
-        foreach ($this->getDataSources() as $ds) {
-            if (null !== ($value = $ds->getValue($name))
-                || $ds instanceof HTML_QuickForm2_DataSource_NullAware && $ds->hasValue($name)
-            ) {
-                $this->setValue($value);
-                return;
-            }
-        }
     }
 
    /**
@@ -141,5 +116,21 @@ abstract class HTML_QuickForm2_Element extends HTML_QuickForm2_Node
         }
         return parent::applyFilters($value);
     }
+
+    protected ?ValueUpdater $valueUpdater = null;
+
+    /**
+     * @return $this
+     */
+    protected function updateValue() : self
+    {
+        if(!isset($this->valueUpdater))
+        {
+            $this->valueUpdater = new ValueUpdater($this);
+        }
+
+        $this->valueUpdater->update();
+
+        return $this;
+    }
 }
-?>

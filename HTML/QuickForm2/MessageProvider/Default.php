@@ -21,6 +21,7 @@
 
 // pear-package-only /** Interface for classes that supply (translated) messages for the elements */
 // pear-package-only require_once 'HTML/QuickForm2/MessageProvider.php';
+use HTML\QuickForm2\AbstractHTMLElement\GlobalOptions;
 
 /**
  * Provides default translations for various elements' messages
@@ -257,7 +258,7 @@ class HTML_QuickForm2_MessageProvider_Default implements HTML_QuickForm2_Message
     *
     * If $langId is not given, language set via
     * <code>
-    * HTML_Common2::setOption('language', '...');
+    * HTML_QuickForm2_AbstractHTMLElement::setOption('language', '...');
     * </code>
     * will be used.
     *
@@ -269,7 +270,7 @@ class HTML_QuickForm2_MessageProvider_Default implements HTML_QuickForm2_Message
     public function get(array $messageId, $langId = null)
     {
         if (empty($langId)) {
-            $langId = HTML_Common2::getOption('language');
+            $langId = GlobalOptions::getLanguage();
         }
         $key = array_shift($messageId);
         if (empty($this->messages[$key]) || empty($this->messages[$key][$langId])) {

@@ -49,15 +49,15 @@ abstract class HTML_QuickForm2_Controller_Page
 
    /**
     * The form wrapped by this page
-    * @var  HTML_QuickForm2
+    * @var  HTML_QuickForm2|NULL
     */
-    protected $form = null;
+    protected ?HTML_QuickForm2 $form = null;
 
    /**
     * Controller this page belongs to
-    * @var  HTML_QuickForm2_Controller
+    * @var  HTML_QuickForm2_Controller|NULL
     */
-    protected $controller = null;
+    protected ?HTML_QuickForm2_Controller $controller = null;
 
    /**
     * Contains the mapping of action names to handlers (objects implementing HTML_QuickForm2_Controller_Action)
@@ -148,6 +148,8 @@ abstract class HTML_QuickForm2_Controller_Page
         return sprintf(self::KEY_NAME, $this->getForm()->getId(), $actionName);
     }
 
+    protected const DEFAULT_IMAGE_SOURCE = 'data:image/gif;base64,R0lGODlhAQABAID/AMDAwAAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==';
+
    /**
     * Sets the default action invoked on page-form submit
     *
@@ -160,54 +162,63 @@ abstract class HTML_QuickForm2_Controller_Page
     *
     * @return HTML_QuickForm2_Controller_DefaultAction Returns the image input used for default action
     */
-    public function setDefaultAction(
-        $actionName,
-        $imageSrc = 'data:image/gif;base64,R0lGODlhAQABAID/AMDAwAAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=='
-    ) {
-        // pear-package-only require_once 'HTML/QuickForm2/Controller/DefaultAction.php';
-
-        if (0 == count($this->form)) {
-            $image = $this->form->appendChild(
-                new HTML_QuickForm2_Controller_DefaultAction(
-                    $this->getButtonName($actionName), array('src' => $imageSrc)
-                )
+    public function setDefaultAction(string $actionName, string $imageSrc = self::DEFAULT_IMAGE_SOURCE) : HTML_QuickForm2_Controller_DefaultAction
+    {
+        if (isset($this->form))
+        {
+            $image = new HTML_QuickForm2_Controller_DefaultAction(
+                $this->getButtonName($actionName), array('src' => $imageSrc)
             );
 
+            $this->form->appendChild($image);
+
+            return $image;
+        }
+
+        $image = $this->form->getElementById('qf:default-action');
+
         // replace the existing DefaultAction
-        } elseif ($image = $this->form->getElementById('qf:default-action')) {
+        if ($image instanceof HTML_QuickForm2_Controller_DefaultAction)
+        {
             $image->setName($this->getButtonName($actionName))
                 ->setAttribute('src', $imageSrc);
 
+            return $image;
+        }
+
         // Inject the element to the first position to improve chances that
         // it ends up on top in the output
-        } else {
-            $it = $this->form->getIterator();
-            $it->rewind();
-            $image = $this->form->insertBefore(
-                new HTML_QuickForm2_Controller_DefaultAction(
-                    $this->getButtonName($actionName), array('src' => $imageSrc)
-                ),
-                $it->current()
-            );
-        }
+        $it = $this->form->getIterator();
+        $it->rewind();
+        $image = new HTML_QuickForm2_Controller_DefaultAction(
+            $this->getButtonName($actionName), array('src' => $imageSrc)
+        );
+
+        $this->form->insertBefore($image, $it->current());
+
         return $image;
     }
 
    /**
     * Wrapper around populateForm() ensuring that it is only called once
     */
-    final public function populateFormOnce()
+    final public function populateFormOnce() : void
     {
-        if (!$this->_formPopulated) {
-            if (!empty($this->controller) && $this->controller->propagateId()) {
-                $this->form->addElement(
-                    'hidden', HTML_QuickForm2_Controller::KEY_ID,
-                    array('id' => 'qf:controller-id')
-                )->setValue($this->controller->getId());
-            }
-            $this->populateForm();
-            $this->_formPopulated = true;
+        if ($this->_formPopulated)
+        {
+            return;
         }
+
+        if (isset($this->controller) && $this->controller->propagateId())
+        {
+            $this->form->addElement(
+                'hidden', HTML_QuickForm2_Controller::KEY_ID,
+                array('id' => 'qf:controller-id')
+            )->setValue($this->controller->getId());
+        }
+
+        $this->populateForm();
+        $this->_formPopulated = true;
     }
 
    /**

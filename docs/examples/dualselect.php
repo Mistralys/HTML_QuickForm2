@@ -14,6 +14,7 @@
 // pear-package-only require_once 'HTML/QuickForm2/Element/Select.php';
 // pear-package-only require_once 'HTML/QuickForm2/Renderer.php';
 // pear-package-only require_once 'HTML/QuickForm2/Renderer/Plugin.php';
+use HTML\QuickForm2\AbstractHTMLElement\WatchedAttributes;
 
 /**
  * "Dualselect" element
@@ -24,18 +25,16 @@
  */
 class HTML_QuickForm2_Element_DualSelect extends HTML_QuickForm2_Element_Select
 {
-    protected $attributes = array('multiple' => 'multiple');
+    protected array $attributes = array(
+        'multiple' => 'multiple'
+    );
 
-    protected $watchedAttributes = array('id', 'name', 'multiple');
-
-    protected function onAttributeChange($name, $value = null)
+    protected function initWatchedAttributes(WatchedAttributes $attributes) : void
     {
-        if ('multiple' == $name && 'multiple' != $value) {
-            throw new HTML_QuickForm2_InvalidArgumentException(
-                "Required 'multiple' attribute cannot be changed"
-            );
-        }
-        parent::onAttributeChange($name, $value);
+        parent::initWatchedAttributes($attributes);
+
+        $attributes
+            ->setReadonly('multiple');
     }
 
     public function __toString()

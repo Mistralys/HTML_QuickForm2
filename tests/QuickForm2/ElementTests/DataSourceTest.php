@@ -10,7 +10,7 @@ use HTML\QuickForm2\AbstractHTMLElement\GlobalOptions;
 use HTML_QuickForm2;
 use HTML_QuickForm2_DataSource_Array;
 use HTML_QuickForm2_DataSource_NullAware;
-use HTML_QuickForm2_ElementImpl;
+use TestAssets\MockElement;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -24,8 +24,8 @@ final class DataSourceTest extends TestCase
     public function test_setValueFromSubmitDatasource() : void
     {
         $form = new HTML_QuickForm2('form1');
-        $elA = $form->appendChild(new HTML_QuickForm2_ElementImpl(self::DEFAULT_NAME));
-        $elB = $form->appendChild(new HTML_QuickForm2_ElementImpl('bar'));
+        $elA = $form->appendChild(new MockElement(self::DEFAULT_NAME));
+        $elB = $form->appendChild(new MockElement('bar'));
 
         $this->assertEquals(self::DEFAULT_VALUE, $elA->getValue());
         $this->assertNull($elB->getValue());
@@ -46,8 +46,8 @@ final class DataSourceTest extends TestCase
             $otherName => 'default value'
         )));
 
-        $elA = $form->appendChild(new HTML_QuickForm2_ElementImpl(self::DEFAULT_NAME));
-        $elB = $form->appendChild(new HTML_QuickForm2_ElementImpl($otherName));
+        $elA = $form->appendChild(new MockElement(self::DEFAULT_NAME));
+        $elB = $form->appendChild(new MockElement($otherName));
 
         $this->assertEquals(self::DEFAULT_VALUE, $elA->getValue(), 'The element has a submitted value, this must take precedence.');
         $this->assertEquals('default value', $elB->getValue(), 'The element has no submitted value, so it must use the data source value.');
@@ -58,7 +58,7 @@ final class DataSourceTest extends TestCase
         $form = new HTML_QuickForm2('unsubmitted');
         $name = $this->getUniqueName();
 
-        $el = $form->appendChild(new HTML_QuickForm2_ElementImpl($name));
+        $el = $form->appendChild(new MockElement($name));
         $this->assertNull($el->getValue());
 
         $ds = new HTML_QuickForm2_DataSource_Array(array(
@@ -83,7 +83,7 @@ final class DataSourceTest extends TestCase
         $form = new HTML_QuickForm2('bug20295');
         $name = $this->getUniqueName();
 
-        $el = $form->appendChild(new HTML_QuickForm2_ElementImpl($name));
+        $el = $form->appendChild(new MockElement($name));
         $el->setValue('not empty');
 
         $ds = new HTML_QuickForm2_DataSource_Array(array(

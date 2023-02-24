@@ -23,6 +23,7 @@
 // pear-package-only  * Abstract base class for QuickForm2 renderers
 // pear-package-only  */
 // pear-package-only require_once 'HTML/QuickForm2/Renderer.php';
+use HTML\QuickForm2\AbstractHTMLElement\GlobalOptions;
 
 /**
  * Default renderer for QuickForm2
@@ -168,7 +169,7 @@ class HTML_QuickForm2_Renderer_Default extends HTML_QuickForm2_Renderer
     *
     * @return $this
     */
-    public function setTemplateForId($id, $template)
+    public function setTemplateForId(string $id, $template) : self
     {
         $this->templatesForId[$id] = $template;
         return $this;
@@ -315,8 +316,8 @@ class HTML_QuickForm2_Renderer_Default extends HTML_QuickForm2_Renderer
             $this->prepareTemplate($this->findTemplate($container, '{content}'), $container)
         );
         $cHtml  = array_pop($this->html);
-        $break  = HTML_Common2::getOption('linebreak');
-        $indent = str_repeat(HTML_Common2::getOption('indent'), count($this->html));
+        $break  = GlobalOptions::getLineBreak();
+        $indent = str_repeat(GlobalOptions::getIndentChar(), count($this->html));
         $this->html[count($this->html) - 1][] = str_replace(
             '{content}', $break . $indent . implode($break . $indent, $cHtml), $cTpl
         );
@@ -401,7 +402,7 @@ class HTML_QuickForm2_Renderer_Default extends HTML_QuickForm2_Renderer
             );
         }
 
-        $break         = HTML_Common2::getOption('linebreak');
+        $break         = GlobalOptions::getLineBreak();
         $script        = $this->getJavascriptBuilder()->getFormJavascript($form->getId());
         $this->html[0] = array(
             str_replace('{content}', $break . implode($break, $this->html[0]), $formTpl) .

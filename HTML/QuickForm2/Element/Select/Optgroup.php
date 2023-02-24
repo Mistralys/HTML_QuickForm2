@@ -23,6 +23,7 @@
 // pear-package-only  * Collection of <option>s and <optgroup>s
 // pear-package-only  */
 // pear-package-only require_once 'HTML/QuickForm2/Element/Select/OptionContainer.php';
+use HTML\QuickForm2\AbstractHTMLElement\GlobalOptions;
 
 /**
  * Class representing an <optgroup> tag
@@ -70,9 +71,9 @@ class HTML_QuickForm2_Element_Select_Optgroup
     public function __toString()
     {
         $indent    = $this->getIndent();
-        $linebreak = self::getOption('linebreak');
+        $linebreak = GlobalOptions::getLineBreak();
         return $indent . '<optgroup' . $this->getAttributes(true) . '>' .
                $linebreak . parent::__toString() . $indent . '</optgroup>' . $linebreak;
     }
 }
-?>
+
