@@ -1,5 +1,8 @@
 # Changes in HTML_QuickForm2
 
+## v2.3.6 PHP8.4 compatibility
+- Core: Fixed deprecation notices for implicit nullable parameters.
+
 ## v2.3.5 Typing fix
 - HTML Elements: Fixed a PHP typing error in `BaseHTMLElement`.
 - HTML Elements: Improved `BaseHTMLElement::getAttributesString()`.
