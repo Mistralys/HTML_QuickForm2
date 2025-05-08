@@ -434,16 +434,15 @@ abstract class HTML_QuickForm2_Renderer
     }
 
    /**
-    * Sets the javascript builder object
+    * Sets the JavaScript builder object
     *
     * You may want to reuse the same builder object if outputting several
     * forms on one page.
     *
-    * @param    HTML_QuickForm2_JavascriptBuilder $builder
-    *
+    * @param HTML_QuickForm2_JavascriptBuilder|NULL $builder
     * @return $this
     */
-    public function setJavascriptBuilder(HTML_QuickForm2_JavascriptBuilder $builder = null)
+    public function setJavascriptBuilder(?HTML_QuickForm2_JavascriptBuilder $builder = null) : self
     {
         $this->jsBuilder = $builder;
         return $this;

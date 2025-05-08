@@ -275,7 +275,7 @@ abstract class HTML_QuickForm2_Container extends HTML_QuickForm2_Node
      * @see HTML_QuickForm2_Container::prependChild()
      * @see HTML_QuickForm2_Container::appendChild()
      */
-    protected function insertChildAtPosition(HTML_QuickForm2_Node $element, string $position, HTML_QuickForm2_Node $target=null) : HTML_QuickForm2_Node
+    protected function insertChildAtPosition(HTML_QuickForm2_Node $element, string $position, ?HTML_QuickForm2_Node $target=null) : HTML_QuickForm2_Node
     {
         if ($this === $element->getContainer()) {
             $this->removeChild($element);

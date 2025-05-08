@@ -549,7 +549,7 @@ abstract class HTML_QuickForm2_Node extends BaseHTMLElement
         }
     }
     
-    public function hasContainerParent(HTML_QuickForm2_Container $container = null) : bool
+    public function hasContainerParent(?HTML_QuickForm2_Container $container = null) : bool
     {
         if($container === null) {
             return false;
