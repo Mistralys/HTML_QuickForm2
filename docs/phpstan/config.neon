@@ -1,7 +1,0 @@
-parameters:
-    paths:
-        - ../../HTML
-        - ../../tests
-        - ../../docs/examples
-    dynamicConstantNames:
-        - SID
