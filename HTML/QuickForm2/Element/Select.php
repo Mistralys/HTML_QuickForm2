@@ -204,7 +204,9 @@ class HTML_QuickForm2_Element_Select extends HTML_QuickForm2_Element
         $values = array();
         foreach ($this->values as $value)
         {
-            if (!empty($this->possibleValues[$value]) || !$this->isValidationIntrinsic()) {
+            // OptionContainer::addOption() casts option values to string on write,
+            // so the read side must match to avoid a null-array-offset deprecation.
+            if (!empty($this->possibleValues[(string)$value]) || !$this->isValidationIntrinsic()) {
                 $values[] = $value;
             }
         }

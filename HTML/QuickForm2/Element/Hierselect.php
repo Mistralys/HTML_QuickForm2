@@ -218,7 +218,7 @@ class HTML_QuickForm2_Element_Hierselect extends HTML_QuickForm2_Container_Group
                 $array =& $array[$key];
             }
             $select->loadOptions($array);
-            $this->_values[] = null !== ($v = $select->getValue())? $v: key($array);
+            $this->_values[] = null !== ($v = $select->getValue())? $v: (key($array) ?? '');
         }
     }
 

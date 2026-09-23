@@ -62,5 +62,33 @@ class HTML_QuickForm2_Element_HierselectTest extends TestCase
 
         $this->assertNull($hs->getValue());
     }
+
+    /**
+     * Regression test for a "null used as array offset" deprecation raised by
+     * _loadChildOptions() when a select's options array is empty and
+     * key($array) falls back to NULL.
+     */
+    public function testLoadChildOptionsWithEmptyOptionsArrayRaisesNoDeprecation(): void
+    {
+        $deprecations = array();
+        set_error_handler(
+            static function (int $errno, string $errstr) use (&$deprecations): bool {
+                $deprecations[] = $errstr;
+                return true;
+            },
+            E_DEPRECATED
+        );
+
+        $hs = new HTML_QuickForm2_Element_Hierselect('hs');
+        $hs->loadOptions(array(array()));
+
+        restore_error_handler();
+
+        $this->assertSame(array(), $deprecations);
+
+        $values = new ReflectionProperty($hs, '_values');
+
+        $this->assertSame(array(''), $values->getValue($hs));
+    }
 }
 ?>

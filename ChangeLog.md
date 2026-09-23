@@ -1,5 +1,20 @@
 # Changes in HTML_QuickForm2
 
+## v2.4.0 PHP8.4 minimum requirement (Breaking-S)
+
+**This release raises the minimum PHP version to 8.4.**
+Several PHP8.4 deprecation warnings have also been fixed across form elements.
+
+- Core: PHP8.4 is now the minimum requirement.
+- Select: Fixed a deprecation warning when reading values for options missing from a submission.
+- JavascriptBuilder: Fixed a deprecation warning triggered by an uninitialized form ID.
+- Hierselect: Fixed a deprecation warning when a selection has no available options.
+
+### Breaking Changes
+
+The minimum supported PHP version is now 8.4. Upgrade the runtime before updating to this
+release; no code changes are required.
+
 ## v2.3.6 PHP8.4 compatibility
 - Core: Fixed deprecation notices for implicit nullable parameters.
 
