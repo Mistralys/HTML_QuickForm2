@@ -168,5 +168,45 @@ class HTML_QuickForm2_JavascriptBuilderTest extends TestCase
         $script = $builder->getFormJavascript();
         $this->assertMatchesRegularExpression('/<script[^>]*nonce="' . $nonce . '"/', $script);
     }
+
+    /**
+     * Regression test for a "null used as array offset" deprecation raised when
+     * addRule() / addElementJavascript() / forceValidator() are called before
+     * setFormId() has ever run, i.e. while $formId still holds its default value.
+     */
+    public function testAddRuleAndElementJavascriptWithoutSetFormIdRaisesNoDeprecation(): void
+    {
+        $builder = new HTML_QuickForm2_JavascriptBuilder();
+        $element = new HTML_QuickForm2_Element_InputText();
+
+        $mockRule = $this->getMockBuilder('HTML_QuickForm2_Rule')
+            ->setMethods(array('validateOwner', 'getJavascriptCallback'))
+            ->setConstructorArgs(array($element))
+            ->getMock();
+        $mockRule->expects($this->once())->method('getJavascriptCallback')
+            ->will($this->returnValue('jsRule'));
+
+        $deprecations = array();
+        set_error_handler(
+            static function (int $errno, string $errstr) use (&$deprecations): bool {
+                $deprecations[] = $errstr;
+                return true;
+            },
+            E_DEPRECATED
+        );
+
+        $builder->addRule($mockRule);
+        $builder->addElementJavascript('setupCode');
+        $builder->forceValidator();
+
+        $validator = $builder->getValidator();
+        $setupCode = $builder->getSetupCode();
+
+        restore_error_handler();
+
+        $this->assertSame(array(), $deprecations);
+        $this->assertStringContainsString('jsRule', $validator);
+        $this->assertStringContainsString('setupCode', $setupCode);
+    }
 }
 ?>

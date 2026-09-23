@@ -77,7 +77,7 @@ class HTML_QuickForm2_JavascriptBuilder
     * Current form ID
     * @var string
     */
-    protected $formId = null;
+    protected $formId = '';
 
 
    /**

@@ -555,4 +555,37 @@ class SelectTest extends TestCase
 
         $this->assertEmpty($values['foo']);
     }
+
+    /**
+     * Regression test for a "null used as array offset" deprecation raised by
+     * getRawValue() when a submitted form's $_POST omits the select's name.
+     */
+    public function testGetValueWithMissingSubmittedNameRaisesNoDeprecation(): void
+    {
+        $_REQUEST[HTML_QuickForm2::resolveTrackVarName('select-missing-name')] = 'yes';
+
+        $form = new HTML_QuickForm2('select-missing-name', 'post', null, true);
+
+        $sel = new HTML_QuickForm2_Element_Select('missingName');
+        $sel->addOption('Text', 'Value');
+        $form->addElement($sel);
+
+        $this->assertTrue($form->isSubmitted());
+
+        $deprecations = array();
+        set_error_handler(
+            static function (int $errno, string $errstr) use (&$deprecations): bool {
+                $deprecations[] = $errstr;
+                return true;
+            },
+            E_DEPRECATED
+        );
+
+        $value = $sel->getValue();
+
+        restore_error_handler();
+
+        $this->assertNull($value);
+        $this->assertSame(array(), $deprecations);
+    }
 }
